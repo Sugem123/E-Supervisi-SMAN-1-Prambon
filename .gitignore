@@ -1,0 +1,154 @@
+#-----------------------------------------------------------
+# Environment & Sensitive Credentials
+#-----------------------------------------------------------
+# Never commit sensitive environment configuration files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+#-----------------------------------------------------------
+# CodeIgniter 4 Writable & Temporary Storage
+#-----------------------------------------------------------
+writable/cache/*
+!writable/cache/index.html
+writable/logs/*
+!writable/logs/index.html
+writable/session/*
+!writable/session/index.html
+writable/uploads/*
+!writable/uploads/index.html
+writable/debugbar/*
+!writable/debugbar/index.html
+writable/temp/*
+!writable/temp/index.html
+writable/backups/*
+!writable/backups/index.html
+php_errors.log
+
+#-----------------------------------------------------------
+# Public User Uploads & Media
+#-----------------------------------------------------------
+# Preserve folder structure with index.html, ignore uploaded content
+public/uploads/*
+!public/uploads/index.html
+!public/uploads/.gitkeep
+public/uploads/profile/*
+!public/uploads/profile/index.html
+!public/uploads/profile/.gitkeep
+public/uploads/foto_bukti/*
+!public/uploads/foto_bukti/index.html
+!public/uploads/foto_bukti/.gitkeep
+
+#-----------------------------------------------------------
+# Database Dumps & Backups
+#-----------------------------------------------------------
+*.sql
+*.sql.gz
+*.sql.zip
+*.sqlite
+*.db
+
+#-----------------------------------------------------------
+# Composer & Node Dependencies
+#-----------------------------------------------------------
+vendor/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+#-----------------------------------------------------------
+# AI Agents, Tools, Knowledge Graph & Flow Notes
+#-----------------------------------------------------------
+.agents/
+.codegraph/
+graphify-out/
+flow/
+
+#-----------------------------------------------------------
+# Large Archives, Local Backups & Scratch Files
+#-----------------------------------------------------------
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.iso
+new 1.bat
+page.html
+tatus
+check_assets.php
+download_assets.php
+project-supervisi/
+
+#-----------------------------------------------------------
+# IDE & Code Editors
+#-----------------------------------------------------------
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains (PhpStorm, WebStorm, etc.)
+.idea/
+*.iml
+
+# NetBeans
+nbproject/
+build/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+.nb-gradle/
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+.phpintel
+
+# Eclipse
+.project
+.buildpath
+.settings/
+
+#-----------------------------------------------------------
+# Operating System Junk Files
+#-----------------------------------------------------------
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.directory
+.Trash-*
+
+#-----------------------------------------------------------
+# Testing & Code Coverage
+#-----------------------------------------------------------
+tests/coverage*
+phpunit
+phpunit*.xml
+!phpunit.xml.dist
+.phpunit.result.cache
+/results/
