@@ -49,7 +49,7 @@ class Security extends BaseConfig
      * CSRF Cookie Name
      * --------------------------------------------------------------------------
      *
-     * Cookie name for Cross Site Request Forgery protection.
+     * Explicit cookie name for the CSRF token.
      */
     public string $cookieName = 'csrf_cookie_name';
 
@@ -58,9 +58,7 @@ class Security extends BaseConfig
      * CSRF Expires
      * --------------------------------------------------------------------------
      *
-     * Expiration time for Cross Site Request Forgery protection cookie.
-     *
-     * Defaults to two hours (in seconds).
+     * Expiration time for the CSRF cookie, in seconds.
      */
     public int $expires = 7200;
 
@@ -69,9 +67,12 @@ class Security extends BaseConfig
      * CSRF Regenerate
      * --------------------------------------------------------------------------
      *
-     * Regenerate CSRF Token on every submission.
+     * Keep the token stable during the session. This is required by the
+     * application's AJAX requests, which submit the token rendered when the
+     * page was loaded. A new token on every request makes the next AJAX
+     * request fail with HTTP 403 unless every response updates the token.
      */
-    public bool $regenerate = true;
+    public bool $regenerate = false;
 
     /**
      * --------------------------------------------------------------------------
