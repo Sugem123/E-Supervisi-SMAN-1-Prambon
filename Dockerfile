@@ -39,12 +39,15 @@ WORKDIR /var/www/html
 
 # Copy application files (with vendor)
 COPY . /var/www/html
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Set directory permissions
-RUN mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar \
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh \
+    && mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 writable
 
 EXPOSE 80
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["apache2-foreground"]
