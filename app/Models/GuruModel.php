@@ -8,7 +8,7 @@ class GuruModel extends Model
 {
     protected $table = 'guru';
     protected $primaryKey = 'id';
-    protected $allowedFields = ['user_id', 'foto_profil', 'telepon', 'alamat', 'nama', 'nip', 'pangkat_golongan', 'mata_pelajaran', 'status_kepegawaian', 'is_supervisor'];
+    protected $allowedFields = ['user_id', 'foto_profil', 'telepon', 'alamat', 'nama', 'nip', 'pangkat_golongan', 'mata_pelajaran', 'mapel_id', 'jenis_ptk', 'status_kepegawaian', 'is_supervisor'];
     protected $useTimestamps = false;
     protected $createdField  = 'created_at';
     protected $updatedField  = null;

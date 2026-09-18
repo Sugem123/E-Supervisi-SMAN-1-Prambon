@@ -58,6 +58,16 @@
                             </div>
                         </div>
 
+                        <div class="form-group mb-3">
+                            <label for="jenis_bukti" class="font-weight-bold text-gray-800">
+                                Jenis Bukti:
+                            </label>
+                            <select class="form-control" id="jenis_bukti" name="jenis_bukti" required>
+                                <option value="foto" selected>Foto Dokumentasi</option>
+                                <option value="berita_acara">Berita Acara (scan/foto BA)</option>
+                            </select>
+                        </div>
+
                         <div class="form-group mb-4">
                             <label for="keterangan" class="font-weight-bold text-gray-800">
                                 Keterangan / Deskripsi Foto (Opsional):

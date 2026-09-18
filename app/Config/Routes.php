@@ -53,26 +53,7 @@ $modules = [
     'kepala'
 ];
 
-$routes->group('guru', ['namespace' => 'App\Controllers\Guru'], function($routes) {
-    $routes->get('/', 'DashboardController::index', ['as' => 'guru/dashboard']);
-    $routes->get('dashboard', 'DashboardController::index', ['as' => 'guru/dashboard']);
-    $routes->get('dashboard/kinerja', 'DashboardController::kinerja');
-});
-
-$routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function($routes) {
-    $routes->get('/', 'DashboardController::index', ['as' => 'admin/dashboard']);
-    $routes->get('dashboard', 'DashboardController::index', ['as' => 'admin/dashboard']);
-});
-
-$routes->group('supervisor', ['namespace' => 'App\Controllers\Supervisor'], function($routes) {
-    $routes->get('/', 'DashboardController::index', ['as' => 'supervisor/dashboard']);
-    $routes->get('dashboard', 'DashboardController::index', ['as' => 'supervisor/dashboard']);
-});
-
-$routes->group('kepala', ['namespace' => 'App\Controllers\Kepala'], function($routes) {
-    $routes->get('/', 'DashboardController::index', ['as' => 'kepala/dashboard']);
-    $routes->get('dashboard', 'DashboardController::index', ['as' => 'kepala/dashboard']);
-});
+// Modul routes below define role dashboards with names + role filters.
 
 // Memuat file routes modular jika ada
 foreach ($modules as $module) {

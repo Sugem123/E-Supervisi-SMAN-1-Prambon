@@ -175,9 +175,9 @@ class HasilController extends BaseController
         $sheet->mergeCells('A1:F1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
 
-        // School info
-        $sheet->setCellValue('A3', 'Nama Madrasah: ' . get_pengaturan('nama_madrasah'));
-        $sheet->setCellValue('A4', 'Alamat: ' . get_pengaturan('alamat_madrasah'));
+        // School info (SMA). NOTE: legacy key 'alamat_madrasah' never existed; correct key is 'alamat'.
+        $sheet->setCellValue('A3', 'Nama Sekolah: ' . get_nama_sekolah());
+        $sheet->setCellValue('A4', 'Alamat: ' . get_pengaturan('alamat', ''));
 
         // Teacher info
         $sheet->setCellValue('A6', 'DATA GURU');

@@ -12,69 +12,15 @@
     <title>Admin Dashboard - Sistem Supervisi</title>
 
     <!-- Custom fonts for this template-->
-    <link href="<?= base_url('assets/vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" type="text/css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
 
     <!-- Custom styles for this template-->
     <link href="<?= base_url('assets/css/sb-admin-2.min.css') ?>" rel="stylesheet">
 
     <!-- Custom styles for this page -->
-    <link href="<?= base_url('assets/vendor/datatables/dataTables.bootstrap4.min.css') ?>" rel="stylesheet">
-
-    <!-- Custom CSS to make text color black -->
-    <style>
-        body {
-            color: #000000 !important;
-        }
-
-        .text-gray-800 {
-            color: #000000 !important;
-        }
-
-        .text-gray-600 {
-            color: #000000 !important;
-        }
-
-        .text-muted {
-            color: #000000 !important;
-        }
-
-        .table {
-            color: #000000 !important;
-        }
-
-        .table th,
-        .table td {
-            color: #000000 !important;
-        }
-
-        .card-body {
-            color: #000000 !important;
-        }
-
-        .h5,
-        .h4,
-        .h3,
-        .h2,
-        .h1,
-        h1,
-        h2,
-        h3,
-        h4,
-        h5 {
-            color: #000000 !important;
-        }
-
-        p {
-            color: #000000 !important;
-        }
-
-        .font-weight-bold {
-            color: #000000 !important;
-
-        }
-    </style>
-
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+    <link href="<?= base_url('assets/css/supervisi-premium.css') ?>" rel="stylesheet">
 </head>
 
 <body id="page-top">
@@ -88,10 +34,11 @@
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= base_url('/admin') ?>">
                 <div class="sidebar-brand-icon">
-                    <?php if (session()->get('sidebar_logo')): ?>
-                        <img src="<?= base_url('uploads/' . session()->get('sidebar_logo')) ?>" alt="Logo" class="img-fluid" style="max-height: 40px;">
+                    <?php $sbLogo = session()->get('sidebar_logo') ?: session()->get('logo'); ?>
+                    <?php if (!empty($sbLogo)): ?>
+                        <img src="<?= base_url('uploads/' . $sbLogo) ?>" onerror="this.onerror=null;this.src='<?= base_url('assets/img/logo-placeholder.svg') ?>'" alt="Logo" class="img-fluid" style="max-height: 40px;">
                     <?php else: ?>
-                        <i class="fas fa-laugh-wink"></i>
+                        <img src="<?= base_url('assets/img/logo-placeholder.svg') ?>" alt="Logo sekolah belum diatur" class="img-fluid" style="max-height: 40px;background:#fff;border-radius:10px;padding:3px;">
                     <?php endif; ?>
                 </div>
                 <div class="sidebar-brand-text mx-3">Sistem Supervisi</div>
@@ -144,6 +91,14 @@
                 <a class="nav-link" href="<?= base_url('/admin/akademik/kelas') ?>">
                     <i class="fas fa-fw fa-graduation-cap"></i>
                     <span>Kelas & Rombel</span>
+                </a>
+            </li>
+
+            <!-- Nav Item - Kelompok Supervisi -->
+            <li class="nav-item <?= strpos($currUri, 'admin/kelompok') === 0 ? 'active' : '' ?>">
+                <a class="nav-link" href="<?= base_url('/admin/kelompok') ?>">
+                    <i class="fas fa-fw fa-users-cog"></i>
+                    <span>Kelompok Supervisi</span>
                 </a>
             </li>
 
@@ -413,18 +368,40 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
 
     <!-- Core plugin JavaScript-->
-    <script src="<?= base_url('assets/vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
 
     <!-- Custom scripts for all pages-->
     <script src="<?= base_url('assets/js/sb-admin-2.min.js') ?>"></script>
 
     <!-- Page level plugins -->
-    <script src="<?= base_url('assets/vendor/chart.js/Chart.min.js') ?>"></script>
-    <script src="<?= base_url('assets/vendor/datatables/jquery.dataTables.min.js') ?>"></script>
-    <script src="<?= base_url('assets/vendor/datatables/dataTables.bootstrap4.min.js') ?>"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
 
     <!-- Page level custom scripts -->
     <script src="<?= base_url('assets/js/demo/datatables-demo.js') ?>"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        <?php if (session()->getFlashdata('success')) : ?>
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: '<?= addslashes(session()->getFlashdata('success')) ?>',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('error')) : ?>
+            Swal.fire({
+                icon: 'error',
+                title: 'Perhatian!',
+                text: '<?= addslashes(session()->getFlashdata('error')) ?>',
+            });
+        <?php endif; ?>
+    </script>
 
     <?= $this->renderSection('scripts') ?>
 

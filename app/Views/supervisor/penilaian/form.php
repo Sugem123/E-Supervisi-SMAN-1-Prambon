@@ -90,7 +90,8 @@
                         </li>
                     <?php endforeach; ?>
                 <?php endif; ?>
-                <!-- Tahap 5: Foto Bukti Supervisi -->
+                <?php $fotoTahapNum = (isset($jenisPenilaian) && is_array($jenisPenilaian)) ? count($jenisPenilaian) + 1 : 5; ?>
+                <!-- Tahap Foto Bukti Supervisi -->
                 <li class="nav-item">
                     <a class="nav-link" 
                        id="step-foto-tab" 
@@ -101,9 +102,9 @@
                        aria-selected="false"
                        data-toggle-tooltip="tooltip"
                        data-placement="top"
-                       title="5. FOTO BUKTI SUPERVISI">
+                       title="<?= $fotoTahapNum; ?>. FOTO BUKTI SUPERVISI">
                         <i class="fas fa-camera mr-1 text-primary"></i>
-                        <span>Tahap 5</span>
+                        <span>Tahap <?= $fotoTahapNum; ?></span>
                         <span class="badge-status-foto">
                             <?php if (!empty($existingPhotos)): ?>
                                 <span class="badge badge-success ml-1">✓</span>
@@ -214,7 +215,7 @@
                                                     </button>
                                                 <?php else: ?>
                                                     <button type="button" class="btn btn-primary btn-sm btn-next-tab-save" data-next-id="foto">
-                                                        Tahap 5: Foto Bukti <i class="fas fa-arrow-right ml-1"></i>
+                                                        Tahap <?= $fotoTahapNum; ?>: Foto Bukti <i class="fas fa-arrow-right ml-1"></i>
                                                     </button>
                                                 <?php endif; ?>
                                             </div>
@@ -224,7 +225,7 @@
                             <?php endforeach; ?>
                         <?php endif; ?>
 
-                        <!-- Tab Pane Tahap 5: Foto Bukti Supervisi -->
+                        <!-- Tab Pane Tahap Foto Bukti Supervisi -->
                         <div class="tab-pane fade <?= (isset($activeTab) && $activeTab == 'foto') ? 'show active' : '' ?>" 
                              id="step-foto" 
                              role="tabpanel" 
@@ -232,7 +233,7 @@
                              
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="font-weight-bold text-gray-800 m-0">
-                                    5. FOTO BUKTI SUPERVISI
+                                    <?= $fotoTahapNum; ?>. FOTO BUKTI SUPERVISI
                                     <span class="badge badge-info ml-2" id="photoCountBadge"><?= !empty($existingPhotos) ? count($existingPhotos) : 0 ?> / 5 Foto</span>
                                 </h5>
                                 <a href="<?= base_url('supervisor/foto-bukti/upload/' . (isset($schedule['id']) ? $schedule['id'] : '')) ?>" class="btn btn-outline-primary btn-sm">
@@ -488,7 +489,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('assets/js/penilaian.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
     // CSRF Token Management
@@ -496,9 +497,39 @@ $(document).ready(function() {
     var csrfHash = '<?= csrf_hash() ?>';
 
     function updateCsrfToken(newToken) {
-        csrfHash = newToken;
-        $('input[name="' + csrfName + '"]').val(newToken);
+        if (newToken) {
+            csrfHash = newToken;
+            $('input[name="' + csrfName + '"]').val(newToken);
+        }
     }
+
+    // Konfigurasi standar teks catatan otomatis berdasarkan skala 1 - 4
+    const skalaConfig = {
+        1: { kategori: "Kurang", catatan: "Kurang, Tidak memiliki bukti dukung." },
+        2: { kategori: "Cukup", catatan: "Cukup, Memiliki bukti dukung, tetapi belum lengkap." },
+        3: { kategori: "Baik", catatan: "Baik, Memiliki bukti dukung yang lengkap, namun belum sepenuhnya sesuai." },
+        4: { kategori: "Sangat Baik", catatan: "Sangat Baik, Memiliki bukti dukung yang lengkap dan sepenuhnya sesuai." }
+    };
+
+    // Auto-fill catatan saat dropdown skor berubah
+    $(document).on('change', '.skala-dropdown', function() {
+        var dropdown = $(this);
+        var score = dropdown.val();
+        var catatanField = dropdown.closest('tr').find('.catatan-field');
+
+        if (score && skalaConfig[score]) {
+            var currentVal = catatanField.val().trim();
+            var isDefault = currentVal === "" || 
+                            currentVal === skalaConfig[1].catatan || 
+                            currentVal === skalaConfig[2].catatan || 
+                            currentVal === skalaConfig[3].catatan || 
+                            currentVal === skalaConfig[4].catatan;
+
+            if (isDefault) {
+                catatanField.val(skalaConfig[score].catatan);
+            }
+        }
+    });
 
     // Inisialisasi tooltip pada tab navigasi agar judul lengkap tampil saat hover
     $('#assessmentTabs [data-toggle="tab"]').tooltip({
@@ -509,8 +540,61 @@ $(document).ready(function() {
         $(this).tooltip('hide');
     });
 
-    // Initialize penilaian elements for auto-fill functionality
-    initializePenilaianElements();
+    // Buka tab berdasarkan URL hash (misal #step-2) saat halaman dimuat
+    var initialHash = window.location.hash;
+    if (initialHash && $('#assessmentTabs a[href="' + initialHash + '"]').length) {
+        $('#assessmentTabs a[href="' + initialHash + '"]').tab('show');
+    }
+
+    // Update URL hash saat tab diganti agar reload/link tetap di tab yang sama
+    $('#assessmentTabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var targetHash = $(e.target).attr('href');
+        if (targetHash && window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, targetHash);
+        }
+    });
+
+    // Bulk edit per tab (Terapkan ke Semua)
+    $(document).on('click', '.bulk-edit-apply-btn', function(e) {
+        e.preventDefault();
+        var tabId = $(this).data('tab-id');
+        var select = $('#bulk-skor-' + tabId);
+        if (!select.length) {
+            select = $(this).closest('.alert').find('.bulk-skor-select');
+        }
+        var score = select.val();
+
+        if (!score) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: 'Silakan pilih salah satu skor terlebih dahulu (1 - 4) pada dropdown sebelum klik Terapkan ke Semua!'
+            });
+            return;
+        }
+
+        var activePane = $('#step-' + tabId);
+        if (!activePane.length) {
+            activePane = $(this).closest('.tab-pane');
+        }
+        activePane.find('.skala-dropdown').each(function() {
+            var dropdown = $(this);
+            dropdown.val(score).trigger('change');
+            var catatanField = dropdown.closest('tr').find('.catatan-field');
+            if (skalaConfig[score]) {
+                catatanField.val(skalaConfig[score].catatan);
+                catatanField.removeClass('manual-catatan');
+            }
+        });
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Semua aspek pada komponen ini telah diatur ke skor ' + score + '.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
     
     // Navigasi Prev Tab
     $(document).on('click', '.btn-prev-tab', function() {
@@ -638,54 +722,6 @@ $(document).ready(function() {
         });
     });
     
-    // Handle bulk edit functionality
-    $(document).on('click', '.bulk-edit-apply-btn', function() {
-        // Ambil ID tab dari tombol yang diklik
-        var tabId = $(this).data('tab-id');
-        
-        // Cari dropdown skor di dalam area alert yang sama
-        var selectedScore = $(this).closest('.alert').find('.bulk-skor-select').val();
-        
-        if (!selectedScore) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Peringatan',
-                text: 'Silakan pilih skor terlebih dahulu'
-            });
-            return;
-        }
-        
-        // Tentukan area tab yang aktif
-        var activeTabPane = $('#step-' + tabId);
-
-        // Get all skala-dropdown and catatan-field elements HANYA DI DALAM TAB YANG AKTIF
-        activeTabPane.find('.skala-dropdown').each(function() {
-            const dropdown = $(this);
-            const aspekId = dropdown.data('aspek');
-            const catatanField = activeTabPane.find('.catatan-field[data-aspek="' + aspekId + '"]');
-            
-            // Set skor yang dipilih
-            dropdown.val(selectedScore);
-            
-            // Isi otomatis catatan berdasarkan 'skalaConfig' dari penilaian.js
-            if (typeof skalaConfig !== 'undefined' && skalaConfig[selectedScore]) {
-                catatanField.val(skalaConfig[selectedScore].catatan);
-                catatanField.removeClass('manual-catatan');
-                if (typeof aspekStates !== 'undefined') {
-                    aspekStates.set(aspekId, 'auto'); // Update state di penilaian.js
-                }
-            }
-        });
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: 'Edit massal untuk tahap ini berhasil!',
-            timer: 1500,
-            showConfirmButton: false
-        });
-    });
-
     // Modal preview image
     $(document).on('click', '.btn-view-image, .foto-preview-item', function() {
         var src = $(this).data('src');

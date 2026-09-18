@@ -50,7 +50,7 @@
     <ul class="nav nav-tabs mb-4" id="pengaturanTabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link <?= ($currentTab === 'identitas') ? 'active' : '' ?>" id="identitas-tab" data-toggle="tab" href="#identitas-pane" role="tab" aria-controls="identitas-pane" aria-selected="<?= ($currentTab === 'identitas') ? 'true' : 'false' ?>">
-                <i class="fas fa-school mr-1"></i> Identitas Madrasah
+                <i class="fas fa-school mr-1"></i> Identitas Sekolah
             </a>
         </li>
         <li class="nav-item">

@@ -15,6 +15,7 @@
                         <th>Nama Jenis</th>
                         <th width="15%">Skor Maksimal</th>
                         <th width="30%">Kategori Skor</th>
+                        <th width="10%">Status</th>
                         <th width="15%">Aksi</th>
                     </tr>
                 </thead>
@@ -41,9 +42,23 @@
                             ?>
                         </td>
                         <td>
+                            <?php $jStatus = $jenis['status'] ?? 'Aktif'; ?>
+                            <?php if ($jStatus === 'Aktif'): ?>
+                                <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Aktif</span>
+                            <?php else: ?>
+                                <span class="badge badge-secondary px-2 py-1"><i class="fas fa-pause-circle mr-1"></i>Nonaktif</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
                             <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editJenisModal<?= $jenis['id'] ?? '' ?>">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
+                            <form action="<?= base_url('/admin/instrumen/jenis-penilaian/' . ($jenis['id'] ?? '') . '/toggle-status') ?>" method="post" class="d-inline" onsubmit="return confirm('Ubah status jenis ini? Data lama tetap tersimpan.')">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn btn-sm <?= $jStatus === 'Aktif' ? 'btn-outline-secondary' : 'btn-outline-success' ?>" title="Aktif/Nonaktif — tanpa hapus data">
+                                    <i class="fas fa-<?= $jStatus === 'Aktif' ? 'eye-slash' : 'eye' ?> mr-1"></i><?= $jStatus === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan' ?>
+                                </button>
+                            </form>
                             <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteJenisModal<?= $jenis['id'] ?? '' ?>">
                                 <i class="fas fa-trash"></i> Hapus
                             </button>
@@ -53,6 +68,7 @@
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <form action="<?= base_url('/admin/instrumen/jenis-penilaian/' . ($jenis['id'] ?? '') . '/update') ?>" method="post">
+                                            <?= csrf_field(); ?>
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Edit Jenis Penilaian</h5>
                                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -60,6 +76,13 @@
                                                 </button>
                                             </div>
                                             <div class="modal-body">
+                                                <div class="form-group">
+                                                    <label>Status Pakai</label>
+                                                    <select class="form-control" name="status">
+                                                        <option value="Aktif" <?= ($jenis['status'] ?? 'Aktif') === 'Aktif' ? 'selected' : '' ?>>Aktif — dipakai di form penilaian</option>
+                                                        <option value="Nonaktif" <?= ($jenis['status'] ?? '') === 'Nonaktif' ? 'selected' : '' ?>>Nonaktif — disembunyikan, histori aman</option>
+                                                    </select>
+                                                </div>
                                                 <div class="form-group">
                                                     <label>Nama Jenis</label>
                                                     <input type="text" class="form-control" name="nama_jenis" value="<?= esc($jenis['nama_jenis'] ?? '') ?>" required>
@@ -118,6 +141,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form action="<?= base_url('/admin/instrumen/jenis-penilaian/create') ?>" method="post">
+                <?= csrf_field(); ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Tambah Jenis Penilaian</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -125,6 +149,13 @@
                     </button>
                 </div>
                 <div class="modal-body">
+                    <div class="form-group">
+                        <label>Status Pakai</label>
+                        <select class="form-control" name="status">
+                            <option value="Aktif">Aktif — dipakai di form penilaian</option>
+                            <option value="Nonaktif">Nonaktif — disembunyikan, histori aman</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Nama Jenis</label>
                         <input type="text" class="form-control" name="nama_jenis" required placeholder="Contoh: Supervisi Administrasi Guru">

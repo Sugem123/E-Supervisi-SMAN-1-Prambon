@@ -31,19 +31,25 @@ class DashboardController extends BaseController
 
     public function index()
     {
+        // Lembaran baru per tahun: semua angka jadwal/kelas difilter tahun Aktif.
+        $tahunAktif = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first();
+        $tahunAktifId = $tahunAktif['id'] ?? null;
+
         // Get system overview data
         $data['total_users'] = $this->userModel->countAll();
         $data['total_guru'] = $this->guruModel->countAll();
         $data['total_supervisor'] = $this->supervisorModel->where('status', 'Aktif')->countAllResults();
-        $data['total_kelas'] = $this->kelasModel->countAll();
+        $data['total_kelas'] = $tahunAktifId
+            ? $this->kelasModel->where('tahun_ajar_id', $tahunAktifId)->countAllResults()
+            : $this->kelasModel->countAll();
 
-        // Get jadwal statistics
-        $data['total_jadwal'] = $this->jadwalSupervisiModel->countAll();
-        $data['jadwal_terjadwal'] = $this->jadwalSupervisiModel->where('status', 'Terjadwal')->countAllResults();
-        $data['jadwal_selesai'] = $this->jadwalSupervisiModel->where('status', 'Selesai')->countAllResults();
+        // Get jadwal statistics (scope tahun aktif bila ada)
+        $data['total_jadwal'] = $this->scopedJadwalCount($tahunAktifId);
+        $data['jadwal_terjadwal'] = $this->scopedJadwalCount($tahunAktifId, 'Terjadwal');
+        $data['jadwal_selesai'] = $this->scopedJadwalCount($tahunAktifId, 'Selesai');
 
         // Get tahun ajaran aktif
-        $data['tahun_ajar_aktif'] = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first();
+        $data['tahun_ajar_aktif'] = $tahunAktif;
 
         // Get recent activities (last 5 users logged in)
         $data['recent_activities'] = $this->userModel
@@ -78,6 +84,22 @@ class DashboardController extends BaseController
         $data['today_stats'] = $this->getTodayStats();
 
         return view('admin/dashboard', $data);
+    }
+
+    /**
+     * Hitung jadwal dengan scope tahun aktif (fallback ke semua bila belum ada tahun Aktif).
+     */
+    private function scopedJadwalCount($tahunAktifId, ?string $status = null): int
+    {
+        $query = $this->jadwalSupervisiModel;
+        if ($tahunAktifId !== null) {
+            $query->where('tahun_ajar_id', $tahunAktifId);
+        }
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return (int) $query->countAllResults();
     }
 
     /**
@@ -189,15 +211,22 @@ class DashboardController extends BaseController
      */
     private function getTodayStats()
     {
-        // Today's supervisions
-        $todaySupervisions = $this->jadwalSupervisiModel
-            ->where('DATE(tanggal_supervisi)', date('Y-m-d'))
-            ->countAllResults();
+        $tahunAktifId = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first()['id'] ?? null;
 
-        // Pending approvals (Terjadwal status)
-        $pendingApprovals = $this->jadwalSupervisiModel
-            ->where('status', 'Terjadwal')
-            ->countAllResults();
+        // Today's supervisions (scope tahun aktif bila ada)
+        $todayQuery = $this->jadwalSupervisiModel
+            ->where('DATE(tanggal_supervisi)', date('Y-m-d'));
+        if ($tahunAktifId !== null) {
+            $todayQuery->where('tahun_ajar_id', $tahunAktifId);
+        }
+        $todaySupervisions = $todayQuery->countAllResults();
+
+        // Pending approvals (Terjadwal status, scope tahun aktif bila ada)
+        $pendingQuery = $this->jadwalSupervisiModel->where('status', 'Terjadwal');
+        if ($tahunAktifId !== null) {
+            $pendingQuery->where('tahun_ajar_id', $tahunAktifId);
+        }
+        $pendingApprovals = $pendingQuery->countAllResults();
 
         // Active users (logged in within last 15 minutes)
         $activeUsers = $this->userModel

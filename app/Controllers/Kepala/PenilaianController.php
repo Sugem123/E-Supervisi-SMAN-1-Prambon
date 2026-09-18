@@ -48,21 +48,29 @@ class PenilaianController extends BaseController
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Jadwal tidak ditemukan atau tidak dapat dinilai');
         }
 
-        // Get all assessment types with mapped columns to ensure we get latest skor_maksimal
-        $jenisPenilaian = $this->jenisModel->findAllWithMappedColumns();
+        // Ambil jenis penilaian yang ditugaskan khusus untuk kelompok supervisi ini (jika ada)
+        $kelompokModel = new \App\Models\KelompokSupervisiModel();
+        $kelompok = $kelompokModel->resolveKelompokForSchedule($schedule);
+        $assignedJenis = $kelompok ? $kelompokModel->getAssignedJenisPenilaian((int)$kelompok['id']) : [];
 
-        // Get all assessment aspects
-        $aspekPenilaian = $this->aspekModel
-            ->select('aspek_penilaian.*, jenis_penilaian.nama as nama_jenis')
-            ->join('jenis_penilaian', 'jenis_penilaian.id = aspek_penilaian.jenis_penilaian_id')
-            ->orderBy('aspek_penilaian.jenis_penilaian_id')
-            ->orderBy('aspek_penilaian.urutan')
-            ->findAll();
+        if (!empty($assignedJenis)) {
+            $assignedIds = array_map('intval', array_column($assignedJenis, 'id'));
+            $allActive = $this->jenisModel->findAllActiveWithMappedColumns();
+            $jenisPenilaian = array_values(array_filter($allActive, static fn ($j) => in_array((int)$j['id'], $assignedIds, true)));
+        } else {
+            $jenisPenilaian = $this->jenisModel->findAllActiveWithMappedColumns();
+        }
+
+        // Hanya aspek Aktif milik jenis Aktif yang ditugaskan
+        $allowedJenisIds = array_map('intval', array_column($jenisPenilaian, 'id'));
+        $aspekPenilaian = $this->aspekModel->findAllActiveWithJenis();
 
         // Group aspects by jenis penilaian
         $aspekByJenis = [];
         foreach ($aspekPenilaian as $aspek) {
-            $aspekByJenis[$aspek['jenis_penilaian_id']][] = $aspek;
+            if (in_array((int)$aspek['jenis_penilaian_id'], $allowedJenisIds, true)) {
+                $aspekByJenis[$aspek['jenis_penilaian_id']][] = $aspek;
+            }
         }
 
         // Get existing results if any
@@ -129,6 +137,14 @@ class PenilaianController extends BaseController
                 ]);
             }
 
+            // Tolak penilaian baru untuk jenis yang dinonaktifkan
+            if (!$this->jenisModel->isActive((int) $jenisPenilaianId)) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Jenis penilaian ini sedang Nonaktif dan tidak dapat dinilai.'
+                ]);
+            }
+
             // Cek apakah hasil untuk jenis penilaian ini sudah ada
             $existingHasil = $this->hasilModel
                 ->where('jadwal_supervisi_id', $jadwalId)
@@ -161,10 +177,8 @@ class PenilaianController extends BaseController
             // Siapkan array untuk menyimpan detail penilaian
             $detailsToInsert = [];
 
-            // Siapkan detail hasil penilaian
-            $aspekList = $this->aspekModel
-                ->where('jenis_penilaian_id', $jenisPenilaianId)
-                ->findAll();
+            // Siapkan detail hasil penilaian (hanya aspek Aktif; BC bila kolom belum ada)
+            $aspekList = $this->filterActiveAspek($jenisPenilaianId);
 
             foreach ($aspekList as $aspek) {
                 $skorKey = 'skor_' . $aspek['id'];
@@ -214,6 +228,20 @@ class PenilaianController extends BaseController
         }
     }
 
+    private function filterActiveAspek($jenisPenilaianId): array
+    {
+        try {
+            $builder = $this->aspekModel->where('jenis_penilaian_id', $jenisPenilaianId);
+            $fields = \Config\Database::connect()->getFieldNames('aspek_penilaian');
+            if (in_array('status', $fields, true)) {
+                $builder->where('status', 'Aktif');
+            }
+            return $builder->findAll();
+        } catch (\Throwable $e) {
+            return $this->aspekModel->where('jenis_penilaian_id', $jenisPenilaianId)->findAll();
+        }
+    }
+
     public function view($jadwalId)
     {
         // Get schedule details
@@ -231,12 +259,21 @@ class PenilaianController extends BaseController
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Hasil penilaian tidak ditemukan');
         }
 
-        // Get all assessment results
-        $hasilPenilaian = $this->hasilModel
+        // Get all assessment results (filter by assigned jenis jika ada)
+        $kelompokModel = new \App\Models\KelompokSupervisiModel();
+        $kelompok = $kelompokModel->resolveKelompokForSchedule($schedule);
+        $assignedIds = $kelompok ? $kelompokModel->getAssignedJenisIds((int)$kelompok['id']) : [];
+
+        $hasilQuery = $this->hasilModel
             ->select('hasil_supervisi.*, jenis_penilaian.nama as nama_jenis, jenis_penilaian.skor_maksimal')
             ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id')
-            ->where('hasil_supervisi.jadwal_supervisi_id', $jadwalId)
-            ->findAll();
+            ->where('hasil_supervisi.jadwal_supervisi_id', $jadwalId);
+
+        if (!empty($assignedIds)) {
+            $hasilQuery->whereIn('hasil_supervisi.jenis_penilaian_id', $assignedIds);
+        }
+
+        $hasilPenilaian = $hasilQuery->findAll();
 
         // Get detail results and calculate nilai_akhir and ketercapaian dynamically
         $detailResults = [];
@@ -312,12 +349,21 @@ class PenilaianController extends BaseController
         }
         
         try {
-            // Hitung total skor dan nilai akhir untuk seluruh supervisi
-            $hasilData = $this->hasilModel
+            // Hitung total skor dan nilai akhir untuk seluruh supervisi (disesuaikan dengan komponen kelompok)
+            $kelompokModel = new \App\Models\KelompokSupervisiModel();
+            $kelompok = $kelompokModel->resolveKelompokForSchedule($schedule);
+            $assignedIds = $kelompok ? $kelompokModel->getAssignedJenisIds((int)$kelompok['id']) : [];
+
+            $hasilQuery = $this->hasilModel
                 ->select('hasil_supervisi.*, jenis_penilaian.skor_maksimal')
                 ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id')
-                ->where('jadwal_supervisi_id', $jadwalId)
-                ->findAll();
+                ->where('jadwal_supervisi_id', $jadwalId);
+
+            if (!empty($assignedIds)) {
+                $hasilQuery->whereIn('hasil_supervisi.jenis_penilaian_id', $assignedIds);
+            }
+
+            $hasilData = $hasilQuery->findAll();
                 
             $totalSkor = 0;
             $totalMaksimal = 0;

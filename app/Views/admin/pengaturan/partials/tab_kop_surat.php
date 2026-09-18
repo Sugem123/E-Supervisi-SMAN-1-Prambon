@@ -18,34 +18,34 @@
             <?= csrf_field() ?>
 
             <div class="form-group">
-                <label for="kop_baris_1" class="small font-weight-bold">Baris 1 (Instansi Pusat/Kementerian)</label>
+                <label for="kop_baris_1" class="small font-weight-bold">Baris 1 (Pemerintah Provinsi / Instansi Pembina)</label>
                 <input type="text" class="form-control" id="kop_baris_1" name="kop_baris_1" 
                     value="<?= esc($kop['baris_1'] ?? '') ?>" 
-                    placeholder="Contoh: KEMENTERIAN AGAMA REPUBLIK INDONESIA" required>
+                    placeholder="Contoh: PEMERINTAH PROVINSI CONTOH" required>
                 <small class="form-text text-muted">Ditampilkan di baris paling atas (huruf kapital).</small>
             </div>
 
             <div class="form-group">
-                <label for="kop_baris_2" class="small font-weight-bold">Baris 2 (Instansi Daerah / Kantor Wilayah/Kabupaten)</label>
+                <label for="kop_baris_2" class="small font-weight-bold">Baris 2 (Dinas Pendidikan / Cabang Dinas)</label>
                 <input type="text" class="form-control" id="kop_baris_2" name="kop_baris_2" 
                     value="<?= esc($kop['baris_2'] ?? '') ?>" 
-                    placeholder="Contoh: KANTOR KEMENTERIAN AGAMA KABUPATEN TANGGAMUS">
+                    placeholder="Contoh: DINAS PENDIDIKAN" data-old-placeholder="Contoh: KANTOR KEMENTERIAN AGAMA KABUPATEN TANGGAMUS">
                 <small class="form-text text-muted">Ditampilkan di baris kedua.</small>
             </div>
 
             <div class="form-group">
-                <label for="kop_baris_3" class="small font-weight-bold">Baris 3 (Nama Madrasah / Satuan Pendidikan)</label>
+                <label for="kop_baris_3" class="small font-weight-bold">Baris 3 (Nama SMA / Satuan Pendidikan)</label>
                 <input type="text" class="form-control font-weight-bold" id="kop_baris_3" name="kop_baris_3" 
                     value="<?= esc($kop['baris_3'] ?? '') ?>" 
-                    placeholder="Contoh: MADRASAH IBTIDAIYAH NEGERI 2 TANGGAMUS" required>
-                <small class="form-text text-muted">Ditampilkan tebal (bold) sebagai nama utama madrasah.</small>
+                    placeholder="Contoh: SMA NEGERI 1 CONTOH" required>
+                <small class="form-text text-muted">Ditampilkan tebal (bold) sebagai nama utama sekolah.</small>
             </div>
 
             <div class="form-group">
                 <label for="kop_baris_4" class="small font-weight-bold">Baris 4 (Alamat Lengkap)</label>
                 <input type="text" class="form-control" id="kop_baris_4" name="kop_baris_4" 
                     value="<?= esc($kop['baris_4'] ?? '') ?>" 
-                    placeholder="Contoh: Jl. Lapangan Ampera Purwodadi No. 109 Kec. Gisting Kab. Tanggamus">
+                    placeholder="Contoh: Jl. Pendidikan No. 1 Kec. Contoh Kab. Contoh">
                 <small class="form-text text-muted">Alamat jalan, desa/kelurahan, kecamatan, kabupaten, provinsi.</small>
             </div>
 
@@ -53,7 +53,7 @@
                 <label for="kop_baris_5" class="small font-weight-bold">Baris 5 (Kontak / Telepon / Email / Website / Kode Pos)</label>
                 <input type="text" class="form-control" id="kop_baris_5" name="kop_baris_5" 
                     value="<?= esc($kop['baris_5'] ?? '') ?>" 
-                    placeholder="Contoh: Website: https://min2tanggamus.sch.id | Email: min2tanggamus@kemenag.go.id">
+                    placeholder="Contoh: Website: https://sman1contoh.sch.id | Email: info@sman1contoh.sch.id">
                 <small class="form-text text-muted">Ditampilkan dengan format miring (italic) di baris bawah.</small>
             </div>
 
@@ -63,7 +63,7 @@
                         <input type="checkbox" class="custom-control-input" id="kop_tampilkan_logo" name="kop_tampilkan_logo" value="1" 
                             <?= ($kop['tampilkan_logo'] == '1') ? 'checked' : '' ?>>
                         <label class="custom-control-label small font-weight-bold" for="kop_tampilkan_logo">
-                            Tampilkan Logo Madrasah pada Kop Surat
+                            Tampilkan Logo Sekolah pada Kop Surat
                         </label>
                     </div>
                 </div>

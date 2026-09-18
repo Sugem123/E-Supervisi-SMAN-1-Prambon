@@ -6,12 +6,15 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Manajemen Pengguna</h1>
         <div>
-            <a href="<?= base_url('/admin/pengguna/sync-guru-data') ?>" class="btn btn-info btn-sm"
-                onclick="return confirm('Apakah Anda yakin ingin menyinkronkan data guru (username dan NIP)?')">
-                <i class="fas fa-sync"></i> Sinkron Data Guru
+            <a href="<?= base_url('/admin/pengguna/export-excel') ?>" class="btn btn-success btn-sm shadow-sm mr-1">
+                <i class="fas fa-file-excel mr-1"></i> Rekap Akun (Excel)
             </a>
-            <a href="<?= base_url('/admin/pengguna/create') ?>" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus"></i> Tambah Pengguna
+            <a href="<?= base_url('/admin/pengguna/sync-guru-data') ?>" class="btn btn-info btn-sm shadow-sm mr-1"
+                onclick="return confirm('Apakah Anda yakin ingin menyinkronkan data guru (username dan NIP)?')">
+                <i class="fas fa-sync mr-1"></i> Sinkron Data Guru
+            </a>
+            <a href="<?= base_url('/admin/pengguna/create') ?>" class="btn btn-primary btn-sm shadow-sm">
+                <i class="fas fa-plus mr-1"></i> Tambah Pengguna
             </a>
         </div>
     </div>

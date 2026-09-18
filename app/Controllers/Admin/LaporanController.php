@@ -325,10 +325,10 @@ class LaporanController extends BaseController
             $totalGuru = count($rekapData);
             $rataRata = $totalGuru > 0 ? round($totalNilaiSum / $totalGuru, 2) : 0;
 
-            // Get Signatures Data
-            $namaKepala = get_pengaturan('nama_kepala', 'Sipuloh, M.Pd');
-            $nipKepala = get_pengaturan('nip_kepala', '197005272007011022');
-            $kotaMadrasah = get_pengaturan('kecamatan', 'Gisting');
+            // Get Signatures Data (SMA placeholders blank until set via Pengaturan).
+            $namaKepala = get_pengaturan('nama_kepala', '');
+            $nipKepala = get_pengaturan('nip_kepala', '');
+            $kotaMadrasah = get_pengaturan('kecamatan', '');
 
             // Default supervisor or first supervisor found in system
             $firstSupervisor = $userModel->where('role', 'supervisor')->first();
@@ -604,12 +604,12 @@ class LaporanController extends BaseController
             ->where('role', 'kepala')
             ->first();
             
-        // Set nama dan nip kepala sekolah
-        $schedule['nama_kepala'] = '';
-        $schedule['nip_kepala'] = '';
-        
-        if ($kepalaSekolah) {
-            $schedule['nama_kepala'] = $kepalaSekolah['username'] ?? 'Kepala Sekolah';
+        // Set nama dan nip kepala sekolah: prefer Pengaturan Identitas, fallback akun role kepala.
+        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', '');
+        $schedule['nip_kepala'] = get_pengaturan('nip_kepala', '');
+
+        if ($schedule['nama_kepala'] === '' && $kepalaSekolah) {
+            $schedule['nama_kepala'] = $kepalaSekolah['username'] ?? '';
             $schedule['nip_kepala'] = $kepalaSekolah['nip'] ?? '';
         }
         
@@ -742,8 +742,8 @@ class LaporanController extends BaseController
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
-            // School name
-            $sheet->setCellValue('A2', get_nama_madrasah());
+            // School name (SMA, legacy wrapper kept in helper).
+            $sheet->setCellValue('A2', get_nama_sekolah());
             $sheet->mergeCells('A2:H2');
             $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(14);
             $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
@@ -937,7 +937,9 @@ class LaporanController extends BaseController
                 'tahun_ajar_id' => $tahun_ajar_id,
                 'status' => $status,
                 'tahun_ajars' => $tahunAjarModel->findAll(),
-                'nama_madrasah' => get_nama_madrasah()
+                // NOTE: keep legacy 'nama_madrasah' view key; add canonical 'nama_sekolah'.
+                'nama_madrasah' => get_nama_sekolah(),
+                'nama_sekolah' => get_nama_sekolah()
             ];
             
             // Get tahun ajar filter info

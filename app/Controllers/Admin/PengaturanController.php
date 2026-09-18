@@ -29,17 +29,22 @@ class PengaturanController extends BaseController
 
         $data['title'] = 'Pengaturan Sistem';
         $data['activeTab'] = $activeTab;
-        $data['identitas'] = [
-            'nama_madrasah' => session()->get('nama_madrasah') ?? $this->settingModel->getSetting('nama_madrasah', 'MIN 2 TANGGAMUS'),
-            'nsm' => session()->get('nsm') ?? $this->settingModel->getSetting('nsm', '111118060002'),
-            'npsn' => session()->get('npsn') ?? $this->settingModel->getSetting('npsn', '60705691'),
-            'alamat' => session()->get('alamat') ?? $this->settingModel->getSetting('alamat', 'Jl. Lapangan Ampera Purwodadi No. 109'),
-            'kecamatan' => session()->get('kecamatan') ?? $this->settingModel->getSetting('kecamatan', 'GISTING'),
-            'kabupaten' => session()->get('kabupaten') ?? $this->settingModel->getSetting('kabupaten', 'KABUPATEN TANGGAMUS'),
-            'provinsi' => session()->get('provinsi') ?? $this->settingModel->getSetting('provinsi', 'LAMPUNG'),
+        $namaSekolah = session()->get('nama_sekolah') ?? $this->settingModel->getSetting('nama_sekolah', null);
+        if (empty($namaSekolah)) {
+            $namaSekolah = session()->get('nama_madrasah') ?? $this->settingModel->getSetting('nama_madrasah', 'SMA NEGERI 1 CONTOH');
+        }
 
-            'nama_kepala' => session()->get('nama_kepala') ?? $this->settingModel->getSetting('nama_kepala', 'Sipuloh, M.Pd'),
-            'nip_kepala' => session()->get('nip_kepala') ?? $this->settingModel->getSetting('nip_kepala', '197005272007011022'),
+        $data['identitas'] = [
+            'nama_sekolah' => $namaSekolah,
+            'nama_madrasah' => $namaSekolah,
+            'npsn' => session()->get('npsn') ?? $this->settingModel->getSetting('npsn', ''),
+            'alamat' => session()->get('alamat') ?? $this->settingModel->getSetting('alamat', ''),
+            'kecamatan' => session()->get('kecamatan') ?? $this->settingModel->getSetting('kecamatan', ''),
+            'kabupaten' => session()->get('kabupaten') ?? $this->settingModel->getSetting('kabupaten', ''),
+            'provinsi' => session()->get('provinsi') ?? $this->settingModel->getSetting('provinsi', ''),
+
+            'nama_kepala' => session()->get('nama_kepala') ?? $this->settingModel->getSetting('nama_kepala', ''),
+            'nip_kepala' => session()->get('nip_kepala') ?? $this->settingModel->getSetting('nip_kepala', ''),
 
             'telepon' => session()->get('telepon') ?? $this->settingModel->getSetting('telepon', ''),
             'email' => session()->get('email') ?? $this->settingModel->getSetting('email', ''),
@@ -55,7 +60,14 @@ class PengaturanController extends BaseController
 
     public function identitasMadrasah()
     {
+        // Legacy route alias kept for old bookmarks/forms; canonical tab is Identitas Sekolah.
         return redirect()->to('/admin/pengaturan?tab=identitas');
+    }
+
+    public function updateIdentitasMadrasah()
+    {
+        // Legacy form endpoint alias; delegate to canonical SMA handler.
+        return $this->updateIdentitas();
     }
 
     public function updatePimpinan()
@@ -198,28 +210,43 @@ class PengaturanController extends BaseController
 
     public function updateIdentitas()
     {
+        // Accept both canonical 'nama_sekolah' and legacy 'nama_madrasah' posts.
+        if ($this->request->getPost('nama_sekolah') === null && $this->request->getPost('nama_madrasah') !== null) {
+            $this->request->setGlobal('post', array_merge($this->request->getPost(), [
+                'nama_sekolah' => $this->request->getPost('nama_madrasah'),
+            ]));
+        }
+
         $rules = [
-            'nama_madrasah' => 'required',
-            'nsm' => 'required',
-            'npsn' => 'required',
-            'alamat' => 'required',
-            'kecamatan' => 'required',
-            'kabupaten' => 'required',
-            'provinsi' => 'required',
+            'nama_sekolah' => 'required',
+            'npsn' => 'permit_empty|max_length[20]',
+            'alamat' => 'permit_empty',
+            'kecamatan' => 'permit_empty',
+            'kabupaten' => 'permit_empty',
+            'provinsi' => 'permit_empty',
+            'telepon' => 'permit_empty|max_length[30]',
+            'email' => 'permit_empty|valid_email|max_length[100]',
         ];
 
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $namaSekolah = trim((string) $this->request->getPost('nama_sekolah'));
+        if ($namaSekolah === '') {
+            $namaSekolah = trim((string) $this->request->getPost('nama_madrasah'));
+        }
+
         $data = [
-            'nama_madrasah' => $this->request->getPost('nama_madrasah'),
-            'nsm' => $this->request->getPost('nsm'),
+            'nama_sekolah' => $namaSekolah,
+            'nama_madrasah' => $namaSekolah,
             'npsn' => $this->request->getPost('npsn'),
             'alamat' => $this->request->getPost('alamat'),
             'kecamatan' => $this->request->getPost('kecamatan'),
             'kabupaten' => $this->request->getPost('kabupaten'),
             'provinsi' => $this->request->getPost('provinsi'),
+            'telepon' => $this->request->getPost('telepon'),
+            'email' => $this->request->getPost('email'),
         ];
 
         foreach ($data as $key => $value) {
@@ -227,6 +254,6 @@ class PengaturanController extends BaseController
             session()->set($key, $value);
         }
 
-        return redirect()->to('/admin/pengaturan?tab=identitas')->with('success', 'Identitas Madrasah berhasil diperbarui.');
+        return redirect()->to('/admin/pengaturan?tab=identitas')->with('success', 'Identitas Sekolah berhasil diperbarui.');
     }
 }

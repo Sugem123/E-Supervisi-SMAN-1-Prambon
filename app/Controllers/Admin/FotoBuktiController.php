@@ -115,6 +115,14 @@ class FotoBuktiController extends BaseController
         }
 
         $keterangan = $this->request->getPost('keterangan');
+        $jenisBukti = $this->request->getPost('jenis_bukti') ?: 'foto';
+        if (!in_array($jenisBukti, ['foto', 'berita_acara'], true)) {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'Jenis bukti tidak valid. Pilih foto atau berita_acara.',
+                'token'   => csrf_hash()
+            ]);
+        }
 
         // Path penyimpanan berdasarkan guru_id
         $guruId = $schedule['guru_id'];
@@ -146,6 +154,7 @@ class FotoBuktiController extends BaseController
                     $this->fotoModel->save([
                         'jadwal_supervisi_id' => $jadwalId,
                         'file_path'           => $relativePath,
+                        'jenis_bukti'         => $jenisBukti,
                         'keterangan'          => $keterangan,
                         'created_at'          => date('Y-m-d H:i:s')
                     ]);

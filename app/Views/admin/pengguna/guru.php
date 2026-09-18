@@ -42,6 +42,7 @@
                             <th>Username</th>
                             <th>Email</th>
                             <th>Pangkat/Golongan</th>
+                            <th>Jenis PTK</th>
                             <th>Mata Pelajaran</th>
                             <th>Status Kepegawaian</th>
                             <th>Status</th>
@@ -56,7 +57,8 @@
                                 <td><?= $guru['username'] ?></td>
                                 <td><?= $guru['email'] ?></td>
                                 <td><?= $guru['pangkat_golongan'] ?></td>
-                                <td><?= $guru['mata_pelajaran'] ?></td>
+                                <td><?= esc($guru['jenis_ptk'] ?? 'Guru') ?></td>
+                                <td><?= esc($guru['nama_mapel_ref'] ?? $guru['mata_pelajaran']) ?></td>
                                 <td><?= $guru['status_kepegawaian'] ?></td>
                                 <td>
                                     <?php if (isset($guru['is_supervisor']) && $guru['is_supervisor'] == 1): ?>

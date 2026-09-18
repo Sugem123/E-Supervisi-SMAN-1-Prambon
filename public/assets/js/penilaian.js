@@ -38,8 +38,9 @@ $(document).ready(function () {
 
         console.log('Sending data for step ' + stepId);
 
+        var baseUrl = (typeof BASE_URL !== 'undefined') ? BASE_URL : '';
         $.ajax({
-            url: BASE_URL + '/kepala/penilaian/save',
+            url: baseUrl + '/kepala/penilaian/save',
             method: 'POST',
             data: formData,
             dataType: 'json',
@@ -128,8 +129,9 @@ $(document).ready(function () {
                 var completeBtn = $('#completeBtn');
                 completeBtn.prop('disabled', true).text('Memproses...');
 
+        var baseUrl = (typeof BASE_URL !== 'undefined') ? BASE_URL : '';
                 $.ajax({
-                    url: BASE_URL + '/kepala/penilaian/complete/' + jadwalId,
+                    url: baseUrl + '/kepala/penilaian/complete/' + jadwalId,
                     method: 'POST',
                     data: {
                         'csrf_test_name': $('input[name="csrf_test_name"]').val()

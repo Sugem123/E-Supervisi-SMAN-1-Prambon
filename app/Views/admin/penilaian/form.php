@@ -343,6 +343,40 @@
                         </div>
                     </form>
 
+                    <!-- Bukti Tambahan: Video, RTL, Berita Acara -->
+                    <div class="card border shadow-sm mb-4">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="m-0 font-weight-bold text-primary small">
+                                <i class="fas fa-paperclip mr-1"></i> Bukti Tambahan (Video / RTL / Berita Acara)
+                            </h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <form id="buktiTambahanForm" enctype="multipart/form-data">
+                                <?= csrf_field() ?>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="link_video" class="small font-weight-bold text-gray-700">Link Video Pembelajaran</label>
+                                        <input type="url" class="form-control form-control-sm" id="link_video" name="link_video" value="<?= esc($buktiTambahan['link_video'] ?? '') ?>" placeholder="https://...">
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="berita_acara" class="small font-weight-bold text-gray-700">Berkas Berita Acara (PDF/Gambar, maks. 5MB)</label>
+                                        <input type="file" class="form-control-file small" id="berita_acara" name="berita_acara" accept=".pdf,image/*">
+                                        <?php if (!empty($buktiTambahan['berita_acara_path'])): ?>
+                                            <small class="text-muted">Tersimpan: <a href="<?= base_url($buktiTambahan['berita_acara_path']) ?>" target="_blank">lihat berkas</a></small>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="rtl" class="small font-weight-bold text-gray-700">RTL (Rencana Tindak Lanjut)</label>
+                                    <textarea class="form-control form-control-sm" id="rtl" name="rtl" rows="3" placeholder="Tuliskan rencana tindak lanjut..."><?= esc($buktiTambahan['rtl'] ?? '') ?></textarea>
+                                </div>
+                                <button type="submit" id="btnSaveBukti" class="btn btn-outline-primary btn-sm font-weight-bold">
+                                    <i class="fas fa-save mr-1"></i> Simpan Bukti Tambahan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- Galeri Foto Terunggah -->
                     <div id="quickPhotoGallery" class="row">
                         <?php if (!empty($existingPhotos)): ?>
@@ -671,6 +705,38 @@ $(document).ready(function() {
                         btn.prop('disabled', false).html('<i class="fas fa-check-double mr-1"></i> Simpan & Selesaikan');
                     }
                 });
+            }
+        });
+    });
+
+    // Handle Bukti Tambahan (link video / RTL / berita acara)
+    $('#buktiTambahanForm').on('submit', function(e) {
+        e.preventDefault();
+        var btn = $('#btnSaveBukti');
+        var originalBtnHtml = btn.html();
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+        var formData = new FormData(this);
+        formData.append(csrfName, csrfHash);
+        $.ajax({
+            url: '<?= base_url('admin/penilaian/bukti/' . $schedule['id']) ?>',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(res) {
+                if (res.token) { updateCsrf(res.token); }
+                if (res.status === 'success') {
+                    Swal.fire({ icon: 'success', title: 'Tersimpan!', text: res.message, timer: 1500, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message || 'Gagal menyimpan bukti tambahan.' });
+                }
+                btn.prop('disabled', false).html(originalBtnHtml);
+            },
+            error: function(xhr, status, error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi kesalahan: ' + error });
+                if (xhr.responseJSON && xhr.responseJSON.token) { updateCsrf(xhr.responseJSON.token); }
+                btn.prop('disabled', false).html(originalBtnHtml);
             }
         });
     });

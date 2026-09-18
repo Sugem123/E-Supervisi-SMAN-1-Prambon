@@ -25,16 +25,34 @@ class AuthFilter implements FilterInterface
             return;
         }
         
-        // Check role-based access if arguments provided
-        if (!empty($arguments)) {
-            $userRole = session()->get('role');
+        // Check role-based access if arguments provided.
+        // Mendukung pemisah koma maupun beberapa argumen agar 'auth:admin'
+        // dan 'auth', args ['admin'] berperilaku sama.
+        $roles = [];
+        if (is_string($arguments)) {
+            $roles = array_filter(array_map('trim', explode(',', $arguments)));
+        } elseif (is_array($arguments)) {
+            foreach ($arguments as $arg) {
+                if (!is_string($arg)) {
+                    continue;
+                }
+                foreach (explode(',', $arg) as $piece) {
+                    $piece = trim($piece);
+                    if ($piece !== '') {
+                        $roles[] = $piece;
+                    }
+                }
+            }
+        }
+        if (!empty($roles)) {
+            $userRole = (string) session()->get('role');
             log_message('info', 'Checking role-based access for role: ' . $userRole);
-            
-            if (!in_array($userRole, $arguments)) {
+
+            if (!in_array($userRole, $roles, true)) {
                 log_message('info', 'Role not allowed, redirecting to role dashboard');
                 
                 // Set flash message for unauthorized access to admin area
-                if (in_array('admin', $arguments)) {
+                if (in_array('admin', $roles, true)) {
                     session()->setFlashdata('error', 'Anda tidak memiliki izin untuk mengakses halaman administrator.');
                 }
                 

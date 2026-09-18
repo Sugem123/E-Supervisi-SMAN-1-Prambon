@@ -136,6 +136,15 @@ class GenerateJadwalController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Data guru yang dipilih tidak valid.');
         }
 
+        // Aturan arsip: hanya tahun Aktif yang boleh di-generate + tolak guru yang sudah 1x tahun ini.
+        if (($tahunAjar['status_aktif'] ?? 'Nonaktif') !== 'Aktif') {
+            return redirect()->back()->withInput()->with('error', 'Generate hanya boleh pada tahun ajaran yang Aktif. Aktifkan dulu tahun ajaran ini.');
+        }
+        $blocked = $this->findAlreadyScheduledTeachers($tahunAjar, array_column($gurus, 'id'));
+        if (!empty($blocked)) {
+            return redirect()->back()->withInput()->with('error', 'Ada ' . count($blocked) . ' guru yang sudah memiliki jadwal tahun ' . $tahunAjar['tahun_ajar'] . ' (' . implode(', ', array_slice($blocked, 0, 5)) . (count($blocked) > 5 ? ', ...' : '') . '). Satu guru hanya 1x supervisi per tahun.');
+        }
+
         // Ambil daftar kelas aktif
         $kelases = $this->kelasModel
             ->where('tahun_ajar_id', $tahunAjarId)
@@ -268,6 +277,33 @@ class GenerateJadwalController extends BaseController
     }
 
     /**
+     * Guard arsip: nama guru yang sudah punya jadwal pada label tahun yang sama.
+     */
+    private function findAlreadyScheduledTeachers(array $tahunAjar, array $guruIds): array
+    {
+        $guruIds = array_values(array_unique(array_filter(array_map('intval', $guruIds))));
+        if (empty($guruIds) || empty($tahunAjar['tahun_ajar'])) {
+            return [];
+        }
+
+        $rows = $this->jadwalSupervisiModel
+            ->select('jadwal_supervisi.guru_id, guru.nama as nama_guru')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+            ->where('tahun_ajar.tahun_ajar', $tahunAjar['tahun_ajar'])
+            ->whereIn('jadwal_supervisi.guru_id', $guruIds)
+            ->groupBy('jadwal_supervisi.guru_id, guru.nama')
+            ->findAll();
+
+        $names = [];
+        foreach ($rows as $row) {
+            $names[] = $row['nama_guru'] ?? ('Guru #' . $row['guru_id']);
+        }
+
+        return $names;
+    }
+
+    /**
      * Menyimpan seluruh jadwal yang telah dikonfirmasi dari halaman preview ke database
      */
     public function save()
@@ -300,12 +336,25 @@ class GenerateJadwalController extends BaseController
         ];
 
         $insertedCount = 0;
+        $skippedCount = 0;
         $db = \Config\Database::connect();
         $db->transStart();
 
         foreach ($jadwals as $idx => $item) {
             // Lewati jika user mencentang hapus/kecualikan baris ini
             if (in_array((string)$idx, $excludeIndices, true)) {
+                continue;
+            }
+
+            // Cegah duplikasi persis: guru yang sama dengan supervisor yang sama di tanggal yang sama
+            $dup = $this->jadwalSupervisiModel
+                ->where('tahun_ajar_id', (int) ($item['tahun_ajar_id'] ?? 0))
+                ->where('guru_id', (int) ($item['guru_id'] ?? 0))
+                ->where('supervisor_id', (int) ($item['supervisor_id'] ?? 0))
+                ->where('tanggal_supervisi', $tanggal)
+                ->first();
+            if ($dup) {
+                $skippedCount++;
                 continue;
             }
 
@@ -362,9 +411,18 @@ class GenerateJadwalController extends BaseController
         $db->transComplete();
 
         if ($db->transStatus() === false || $insertedCount === 0) {
-            return redirect()->to(base_url('admin/jadwal/generate'))->with('error', 'Gagal menyimpan jadwal supervisi otomatis.');
+            $msg = 'Gagal menyimpan jadwal supervisi otomatis.';
+            if ($skippedCount > 0) {
+                $msg .= ' ' . $skippedCount . ' baris dilewati karena duplikat atau jadwal bentrok.';
+            }
+            return redirect()->to(base_url('admin/jadwal/generate'))->with('error', $msg);
         }
 
-        return redirect()->to(base_url('admin/jadwal'))->with('success', 'Berhasil membuat ' . $insertedCount . ' jadwal supervisi otomatis!');
+        $msg = 'Berhasil membuat ' . $insertedCount . ' jadwal supervisi otomatis!';
+        if ($skippedCount > 0) {
+            $msg .= ' ' . $skippedCount . ' baris dilewati (duplikat jadwal yang sudah ada).';
+        }
+
+        return redirect()->to(base_url('admin/jadwal'))->with('success', $msg);
     }
 }

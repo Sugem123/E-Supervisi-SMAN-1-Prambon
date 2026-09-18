@@ -217,8 +217,8 @@
                 <div style="font-size: 7.5pt; color: #555;">NIP. ....................................................</div>
             </td>
             <td>
-                <?= esc($kota_madrasah ?? 'Gisting') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia(date('Y-m-d'), false) : date('d F Y') ?><br>
-                <strong>Kepala Madrasah</strong>
+                <?= esc(!empty($kota_madrasah) ? $kota_madrasah : '....................') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia(date('Y-m-d'), false) : date('d F Y') ?><br>
+                <strong>Kepala Sekolah</strong>
                 <div class="signature-space"></div>
                 <div class="signature-name"><?= esc($nama_kepala ?? get_nama_kepala()) ?></div>
                 <div style="font-size: 7.5pt; color: #555;">NIP. <?= esc($nip_kepala ?? get_pengaturan('nip_kepala', '')) ?></div>
@@ -234,7 +234,7 @@
                     Dokumen Jadwal Supervisi &mdash; Dicetak otomatis oleh Sistem Supervisi pada <?= date('d/m/Y H:i') ?> WIB
                 </td>
                 <td style="text-align: right;">
-                    MIN 2 Tanggamus
+                    <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : '') ?>
                 </td>
             </tr>
         </table>

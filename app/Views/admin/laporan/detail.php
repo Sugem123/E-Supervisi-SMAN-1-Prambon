@@ -279,6 +279,40 @@
         </div>
     </div>
 
+    <!-- Bukti Tambahan: Video / RTL / Berita Acara -->
+    <?php
+    $buktiVideo = null;
+    $buktiRtl = null;
+    $buktiBa = null;
+    if (!empty($hasilList)) {
+        foreach ($hasilList as $hasilRow) {
+            if ($buktiVideo === null && !empty($hasilRow['link_video'])) { $buktiVideo = $hasilRow['link_video']; }
+            if ($buktiRtl === null && !empty($hasilRow['rtl'])) { $buktiRtl = $hasilRow['rtl']; }
+            if ($buktiBa === null && !empty($hasilRow['berita_acara_path'])) { $buktiBa = $hasilRow['berita_acara_path']; }
+        }
+    }
+    ?>
+    <?php if ($buktiVideo !== null || $buktiRtl !== null || $buktiBa !== null): ?>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-paperclip mr-1"></i> Bukti Tambahan
+            </h6>
+        </div>
+        <div class="card-body">
+            <?php if ($buktiVideo !== null): ?>
+                <p class="mb-2"><strong>Link Video:</strong> <a href="<?= esc($buktiVideo) ?>" target="_blank" rel="noopener"><?= esc($buktiVideo) ?></a></p>
+            <?php endif; ?>
+            <?php if ($buktiRtl !== null): ?>
+                <p class="mb-2"><strong>RTL:</strong><br><?= nl2br(esc($buktiRtl)) ?></p>
+            <?php endif; ?>
+            <?php if ($buktiBa !== null): ?>
+                <p class="mb-0"><strong>Berita Acara:</strong> <a href="<?= base_url($buktiBa) ?>" target="_blank">lihat berkas</a></p>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Photo Evidence -->
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white">

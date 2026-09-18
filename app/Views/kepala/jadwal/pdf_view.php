@@ -71,8 +71,8 @@
     </table>
 
     <div style="margin-top: 20px; float: right; width: 250px; text-align: left; font-size: 12px;line-height: 0.5;">
-        <p>Tanggamus, <?= format_tanggal_indonesia(date('Y-m-d')) ?></p>
-        <p>Kepala Madrasah,</p>
+        <p><?= esc(get_pengaturan('kecamatan', '....................')) ?>, <?= format_tanggal_indonesia(date('Y-m-d')) ?></p>
+        <p>Kepala Sekolah,</p>
         <br><br><br><br>
         <p><strong><u><?= get_pengaturan('nama_kepala', '......................') ?></u></strong></p>
         <p>NIP. <?= get_pengaturan('nip_kepala', '......................') ?></p>

@@ -59,6 +59,7 @@
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form action="<?= base_url('/admin/akademik/tahun-ajar/' . $tahun['id'] . '/update') ?>" method="post">
+                                                <?= csrf_field(); ?>
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Tahun Ajaran</h5>
                                                     <button type="button" class="close" data-dismiss="modal">
@@ -109,6 +110,7 @@
         </div>
         <div class="card-body">
             <form action="<?= base_url('/admin/akademik/tahun-ajar/create') ?>" method="post">
+                <?= csrf_field(); ?>
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label>Tahun Ajaran</label>

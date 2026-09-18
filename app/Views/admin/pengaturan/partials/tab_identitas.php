@@ -2,7 +2,7 @@
     <!-- Kolom Kiri: Logo & Aset Visual + Ubah Password -->
     <div class="col-lg-4 mb-4">
 
-        <!-- Card Logo & Branding Madrasah -->
+        <!-- Card Logo & Branding Sekolah -->
         <div class="card shadow border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom">
                 <h6 class="m-0 font-weight-bold text-primary">
@@ -11,17 +11,17 @@
             </div>
             <div class="card-body text-center p-4">
                 
-                <!-- 1. Logo Utama Madrasah -->
+                <!-- 1. Logo Utama Sekolah -->
                 <div class="mb-4">
-                    <div class="small font-weight-bold text-gray-700 text-uppercase mb-2" style="letter-spacing: 0.5px;">Logo Utama Madrasah</div>
+                    <div class="small font-weight-bold text-gray-700 text-uppercase mb-2" style="letter-spacing: 0.5px;">Logo Utama Sekolah</div>
                     <div class="d-inline-block position-relative mb-2">
                         <?php if (!empty($identitas['logo'])): ?>
-                            <img src="<?= base_url('uploads/' . $identitas['logo']) ?>" 
-                                 alt="Logo Madrasah" 
+                            <img src="<?= base_url('uploads/' . $identitas['logo']) ?>" onerror="this.onerror=null;this.src='<?= base_url('assets/img/logo-placeholder.svg') ?>'"
+                                 alt="Logo Sekolah" 
                                  class="img-thumbnail rounded-circle shadow-sm" 
                                  style="width: 120px; height: 120px; object-fit: contain; background: #fff; border: 3px solid #eaecf4;">
                         <?php else: ?>
-                            <img src="<?= base_url('assets/img/logo-placeholder.png') ?>" 
+                            <img src="<?= base_url('assets/img/logo-placeholder.svg') ?>" 
                                  alt="Logo Placeholder" 
                                  class="img-thumbnail rounded-circle shadow-sm" 
                                  style="width: 120px; height: 120px; object-fit: contain; background: #f8f9fc; border: 3px solid #eaecf4;">
@@ -41,7 +41,7 @@
                         <?php if (!empty($identitas['logo'])): ?>
                             <a href="<?= base_url('admin/pengaturan/identitas-madrasah/delete-logo/logo') ?>" 
                                class="btn btn-outline-danger btn-sm shadow-sm" 
-                               onclick="return confirm('Apakah Anda yakin ingin menghapus logo madrasah?')">
+                               onclick="return confirm('Apakah Anda yakin ingin menghapus logo sekolah?')">
                                 <i class="fas fa-trash"></i>
                             </a>
                         <?php endif; ?>
@@ -51,12 +51,12 @@
 
                 <hr class="my-3">
 
-                <!-- 2. Logo Sidebar Madrasah -->
+                <!-- 2. Logo Sidebar Sekolah -->
                 <div>
                     <div class="small font-weight-bold text-gray-700 text-uppercase mb-2" style="letter-spacing: 0.5px;">Logo Sidebar (Menu Kiri)</div>
                     <div class="p-3 bg-light rounded border mb-2 d-flex align-items-center justify-content-center" style="min-height: 70px;">
                         <?php if (!empty($identitas['sidebar_logo'])): ?>
-                            <img src="<?= base_url('uploads/' . $identitas['sidebar_logo']) ?>" 
+                            <img src="<?= base_url('uploads/' . $identitas['sidebar_logo']) ?>" onerror="this.onerror=null;this.src='<?= base_url('assets/img/logo-placeholder.svg') ?>'"
                                  alt="Sidebar Logo" 
                                  class="img-fluid" 
                                  style="max-height: 48px; max-width: 100%;">
@@ -135,11 +135,11 @@
     <!-- Kolom Kanan: Formulir Identitas Lembaga & Pimpinan -->
     <div class="col-lg-8 mb-4">
 
-        <!-- Card 1: Form Identitas Madrasah (Inline Form Langsung) -->
+        <!-- Card 1: Form Identitas Sekolah SMA (Inline Form Langsung) -->
         <div class="card shadow border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-school mr-1"></i> Data Identitas Madrasah
+                    <i class="fas fa-school mr-1"></i> Data Identitas Sekolah
                 </h6>
                 <span class="badge badge-light border text-primary small">
                     <i class="fas fa-info-circle mr-1"></i> Data Profil Resmi
@@ -150,34 +150,21 @@
                     <?= csrf_field() ?>
 
                     <div class="form-group mb-3">
-                        <label for="nama_madrasah" class="font-weight-bold small text-gray-700">Nama Madrasah / Sekolah <span class="text-danger">*</span></label>
+                        <label for="nama_sekolah" class="font-weight-bold small text-gray-700">Nama SMA / Sekolah <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text bg-light text-primary border-right-0">
                                     <i class="fas fa-building"></i>
                                 </span>
                             </div>
-                            <input type="text" class="form-control border-left-0" id="nama_madrasah" name="nama_madrasah" 
-                                   value="<?= esc($identitas['nama_madrasah'] ?? '') ?>" required placeholder="Contoh: MAN 1 Bandar Lampung">
+                            <input type="text" class="form-control border-left-0" id="nama_sekolah" name="nama_sekolah" 
+                                   value="<?= esc($identitas['nama_sekolah'] ?? $identitas['nama_madrasah'] ?? '') ?>" required placeholder="Contoh: SMA Negeri 1 Contoh">
                         </div>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 form-group mb-3">
-                            <label for="nsm" class="font-weight-bold small text-gray-700">Nomor Statistik Madrasah (NSM) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text bg-light text-muted border-right-0">
-                                        <i class="fas fa-hashtag"></i>
-                                    </span>
-                                </div>
-                                <input type="text" class="form-control border-left-0" id="nsm" name="nsm" 
-                                       value="<?= esc($identitas['nsm'] ?? '') ?>" required placeholder="12 digit NSM">
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 form-group mb-3">
-                            <label for="npsn" class="font-weight-bold small text-gray-700">Nomor Pokok Sekolah Nasional (NPSN) <span class="text-danger">*</span></label>
+                        <div class="col-md-12 form-group mb-3">
+                            <label for="npsn" class="font-weight-bold small text-gray-700">Nomor Pokok Sekolah Nasional (NPSN)</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text bg-light text-muted border-right-0">
@@ -185,58 +172,71 @@
                                     </span>
                                 </div>
                                 <input type="text" class="form-control border-left-0" id="npsn" name="npsn" 
-                                       value="<?= esc($identitas['npsn'] ?? '') ?>" required placeholder="8 digit NPSN">
+                                       value="<?= esc($identitas['npsn'] ?? '') ?>" placeholder="Contoh: 10802812 (opsional, isi via Pengaturan)">
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="alamat" class="font-weight-bold small text-gray-700">Alamat Lengkap <span class="text-danger">*</span></label>
+                        <label for="alamat" class="font-weight-bold small text-gray-700">Alamat Lengkap</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text bg-light text-danger border-right-0">
                                     <i class="fas fa-map-marker-alt"></i>
                                 </span>
                             </div>
-                            <textarea class="form-control border-left-0" id="alamat" name="alamat" rows="2" required 
-                                      placeholder="Nama jalan, nomor, desa/kelurahan..."><?= esc($identitas['alamat'] ?? '') ?></textarea>
+                            <textarea class="form-control border-left-0" id="alamat" name="alamat" rows="2" 
+                                      placeholder="Contoh: Jl. Pendidikan No. 1 ..."><?= esc($identitas['alamat'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group mb-3">
+                            <label for="telepon" class="font-weight-bold small text-gray-700">Telepon</label>
+                            <input type="text" class="form-control" id="telepon" name="telepon"
+                                   value="<?= esc($identitas['telepon'] ?? '') ?>" placeholder="Contoh: (021) 123456">
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label for="email" class="font-weight-bold small text-gray-700">Email Resmi</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="<?= esc($identitas['email'] ?? '') ?>" placeholder="Contoh: info@sekolah.sch.id">
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-4 form-group mb-3">
-                            <label for="kecamatan" class="font-weight-bold small text-gray-700">Kecamatan <span class="text-danger">*</span></label>
+                            <label for="kecamatan" class="font-weight-bold small text-gray-700">Kecamatan</label>
                             <input type="text" class="form-control" id="kecamatan" name="kecamatan" 
-                                   value="<?= esc($identitas['kecamatan'] ?? '') ?>" required placeholder="Kecamatan">
+                                   value="<?= esc($identitas['kecamatan'] ?? '') ?>" placeholder="Contoh: Kecamatan Contoh">
                         </div>
 
                         <div class="col-md-4 form-group mb-3">
-                            <label for="kabupaten" class="font-weight-bold small text-gray-700">Kabupaten / Kota <span class="text-danger">*</span></label>
+                            <label for="kabupaten" class="font-weight-bold small text-gray-700">Kabupaten / Kota</label>
                             <input type="text" class="form-control" id="kabupaten" name="kabupaten" 
-                                   value="<?= esc($identitas['kabupaten'] ?? '') ?>" required placeholder="Kabupaten/Kota">
+                                   value="<?= esc($identitas['kabupaten'] ?? '') ?>" placeholder="Contoh: Kabupaten Contoh">
                         </div>
 
                         <div class="col-md-4 form-group mb-3">
-                            <label for="provinsi" class="font-weight-bold small text-gray-700">Provinsi <span class="text-danger">*</span></label>
+                            <label for="provinsi" class="font-weight-bold small text-gray-700">Provinsi</label>
                             <input type="text" class="form-control" id="provinsi" name="provinsi" 
-                                   value="<?= esc($identitas['provinsi'] ?? '') ?>" required placeholder="Provinsi">
+                                   value="<?= esc($identitas['provinsi'] ?? '') ?>" placeholder="Contoh: Provinsi Contoh">
                         </div>
                     </div>
 
                     <div class="text-right pt-2 border-top">
                         <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm font-weight-bold">
-                            <i class="fas fa-save mr-1"></i> Simpan Identitas Madrasah
+                            <i class="fas fa-save mr-1"></i> Simpan Identitas Sekolah
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Card 2: Form Kepala Madrasah (Pimpinan Lembaga) -->
+        <!-- Card 2: Form Kepala Sekolah (Pimpinan Lembaga) -->
         <div class="card shadow border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-gray-800">
-                    <i class="fas fa-user-tie text-info mr-1"></i> Kepala Madrasah (Pejabat Penandatangan)
+                    <i class="fas fa-user-tie text-info mr-1"></i> Kepala Sekolah (Pejabat Penandatangan)
                 </h6>
                 <span class="badge badge-light border text-info small">
                     <i class="fas fa-stamp mr-1"></i> Lembar Pengesahan
@@ -245,7 +245,7 @@
             <div class="card-body p-4">
                 <div class="alert alert-light border small text-muted mb-3">
                     <i class="fas fa-info-circle text-info mr-1"></i>
-                    Nama dan NIP Kepala Madrasah di bawah ini akan otomatis tercetak pada lembar pengesahan jadwal, instrumen penilaian, dan laporan supervisi PDF.
+                    Nama dan NIP Kepala Sekolah di bawah ini akan otomatis tercetak pada lembar pengesahan jadwal, instrumen penilaian, dan laporan supervisi PDF. Kosongkan dulu bila belum ada data definitif.
                 </div>
 
                 <form action="<?= base_url('admin/pengaturan/update-pimpinan') ?>" method="post">
@@ -253,7 +253,7 @@
                     
                     <div class="row">
                         <div class="col-md-7 form-group mb-3">
-                            <label for="nama_kepala" class="font-weight-bold small text-gray-700">Nama Kepala Madrasah & Gelar <span class="text-danger">*</span></label>
+                            <label for="nama_kepala" class="font-weight-bold small text-gray-700">Nama Kepala Sekolah & Gelar</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text bg-light text-info border-right-0">
@@ -261,12 +261,12 @@
                                     </span>
                                 </div>
                                 <input type="text" class="form-control border-left-0" id="nama_kepala" name="nama_kepala" 
-                                       value="<?= esc($identitas['nama_kepala'] ?? '') ?>" required placeholder="Contoh: Drs. H. Ahmad Fauzi, M.Pd.">
+                                       value="<?= esc($identitas['nama_kepala'] ?? '') ?>" placeholder="Contoh: Drs. Nama Kepala Sekolah, M.Pd.">
                             </div>
                         </div>
 
                         <div class="col-md-5 form-group mb-3">
-                            <label for="nip_kepala" class="font-weight-bold small text-gray-700">NIP Kepala Madrasah</label>
+                            <label for="nip_kepala" class="font-weight-bold small text-gray-700">NIP Kepala Sekolah</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text bg-light text-muted border-right-0">

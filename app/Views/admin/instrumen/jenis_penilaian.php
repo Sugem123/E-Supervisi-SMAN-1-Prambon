@@ -76,6 +76,7 @@
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form action="<?= base_url('/admin/instrumen/jenis-penilaian/' . ($jenis['id'] ?? '') . '/update') ?>" method="post">
+                                                <?= csrf_field(); ?>
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Jenis Penilaian</h5>
                                                     <button type="button" class="close" data-dismiss="modal">
@@ -163,6 +164,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form action="<?= base_url('/admin/instrumen/jenis-penilaian/create') ?>" method="post">
+                <?= csrf_field(); ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Tambah Jenis Penilaian</h5>
                     <button type="button" class="close" data-dismiss="modal">

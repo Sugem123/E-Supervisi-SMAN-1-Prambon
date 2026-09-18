@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\GuruModel;
+use App\Models\RefMapelModel;
 use App\Models\UserModel;
 
 class GuruController extends BaseController
@@ -21,8 +22,9 @@ class GuruController extends BaseController
 
     public function index()
     {
-        $gurus = $this->guruModel->select('guru.*, users.email, users.status as user_status')
+        $gurus = $this->guruModel->select('guru.*, users.email, users.status as user_status, ref_mapel.nama_mapel as nama_mapel_ref')
             ->join('users', 'guru.user_id = users.id', 'left')
+            ->join('ref_mapel', 'ref_mapel.id = guru.mapel_id', 'left')
             ->findAll();
 
         $data = [
@@ -35,8 +37,18 @@ class GuruController extends BaseController
 
     public function create()
     {
+        $mapels = [];
+        try {
+            if ($this->db->tableExists('ref_mapel')) {
+                $mapelModel = new RefMapelModel();
+                $mapels = $mapelModel->where('status', 'Aktif')->orderBy('nama_mapel', 'ASC')->findAll();
+            }
+        } catch (\Throwable $e) {
+            $mapels = [];
+        }
         $data = [
             'title' => 'Tambah Data Guru',
+            'mapels' => $mapels,
         ];
 
         return view('admin/guru/create', $data);
@@ -49,6 +61,9 @@ class GuruController extends BaseController
         $rules = [
             'nama' => 'required',
             'email' => 'required|valid_email|is_unique[users.email]',
+            'jenis_ptk' => 'permit_empty|in_list[Guru,Tendik]',
+            'mapel_id' => 'permit_empty|integer',
+            'status_kepegawaian' => 'permit_empty|in_list[PNS,PPPK,GTT,PTT,Honorer,Kontrak]',
         ];
 
         if (!$this->validate($rules)) {
@@ -71,12 +86,16 @@ class GuruController extends BaseController
             $userId = $this->userModel->getInsertID();
 
             // Create the guru record
+            $mapelId = $this->request->getPost('mapel_id');
+            $mapelId = ($mapelId === '' || $mapelId === null) ? null : (int) $mapelId;
             $guruData = [
                 'user_id' => $userId,
                 'nama' => $this->request->getPost('nama'),
                 'nip' => $this->request->getPost('nip'),
                 'pangkat_golongan' => $this->request->getPost('pangkat_golongan'),
                 'mata_pelajaran' => $this->request->getPost('mata_pelajaran'),
+                'mapel_id' => $mapelId,
+                'jenis_ptk' => $this->request->getPost('jenis_ptk') ?: 'Guru',
                 'status_kepegawaian' => $this->request->getPost('status_kepegawaian'),
                 'is_supervisor' => $this->request->getPost('is_supervisor') ? 1 : 0,
             ];
@@ -108,9 +127,19 @@ class GuruController extends BaseController
             return redirect()->back()->with('error', 'Data guru tidak ditemukan.');
         }
 
+        $mapels = [];
+        try {
+            if ($this->db->tableExists('ref_mapel')) {
+                $mapelModel = new RefMapelModel();
+                $mapels = $mapelModel->where('status', 'Aktif')->orderBy('nama_mapel', 'ASC')->findAll();
+            }
+        } catch (\Throwable $e) {
+            $mapels = [];
+        }
         $data = [
             'title' => 'Edit Data Guru',
-            'guru' => $guru
+            'guru' => $guru,
+            'mapels' => $mapels,
         ];
 
         return view('admin/guru/edit', $data);
@@ -129,6 +158,9 @@ class GuruController extends BaseController
         $rules = [
             'nama' => 'required',
             'email' => 'required|valid_email|is_unique[users.email,id,' . $guru['user_id'] . ']',
+            'jenis_ptk' => 'permit_empty|in_list[Guru,Tendik]',
+            'mapel_id' => 'permit_empty|integer',
+            'status_kepegawaian' => 'permit_empty|in_list[PNS,PPPK,GTT,PTT,Honorer,Kontrak]',
         ];
 
         if (!$this->validate($rules)) {
@@ -140,11 +172,15 @@ class GuruController extends BaseController
 
         try {
             // Update guru data
+            $mapelId = $this->request->getPost('mapel_id');
+            $mapelId = ($mapelId === '' || $mapelId === null) ? null : (int) $mapelId;
             $guruData = [
                 'nama' => $this->request->getPost('nama'),
                 'nip' => $this->request->getPost('nip'),
                 'pangkat_golongan' => $this->request->getPost('pangkat_golongan'),
                 'mata_pelajaran' => $this->request->getPost('mata_pelajaran'),
+                'mapel_id' => $mapelId,
+                'jenis_ptk' => $this->request->getPost('jenis_ptk') ?: 'Guru',
                 'status_kepegawaian' => $this->request->getPost('status_kepegawaian'),
                 'is_supervisor' => $this->request->getPost('is_supervisor') ? 1 : 0,
             ];

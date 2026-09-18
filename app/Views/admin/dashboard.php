@@ -1,7 +1,13 @@
 <?= $this->extend('layouts/admin'); ?>
 
 <?= $this->section('content'); ?>
-<div class="container-fluid">
+<link href="<?= base_url('assets/css/supervisi-premium.css') ?>" rel="stylesheet">
+<div class="sup-dashboard container-fluid">
+    <?php $tahunAktifLabel = isset($tahun_ajar_aktif) && $tahun_ajar_aktif ? esc($tahun_ajar_aktif['tahun_ajar'] . ' · ' . $tahun_ajar_aktif['semester']) : 'Belum ada tahun Aktif'; ?>
+    <div class="sup-page-head">
+        <div><h1>Dashboard Supervisi Tahunan</h1><p>Lembaran aktif <strong><?= $tahunAktifLabel ?></strong> · 1 guru 1 supervisi · guru otomatis lanjut · kelompok via carry-over.</p></div>
+        <span class="sup-year-pill"><span class="live" aria-hidden="true"></span><?= $tahunAktifLabel ?></span>
+    </div>
 
     <!-- Custom CSS for Premium Look -->
     <style>
@@ -175,8 +181,8 @@
     <div class="dashboard-hero text-light p-4">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h2 class="font-weight-bold mb-2 text-light">Selamat Datang, Admin! 👋</h2>
-                <p class="mb-0 opacity-80">Berikut adalah ringkasan aktivitas dan statistik sistem supervisi madrasah hari ini.</p>
+                <h2 class="font-weight-bold mb-2 text-light">Selamat Datang, Admin!</h2>
+                <p class="mb-0 opacity-80">Ringkasan lembaran aktif <?= $tahunAktifLabel ?>: jadwal tahun ini, carry-over kelompok, dan progres supervisi.</p>
             </div>
             <div class="col-md-4 text-md-right mt-3 mt-md-0">
                 <div class="h4 font-weight-bold mb-0" style="color: #f6c23e !important;" id="waktuWIB"><?= format_waktu_indonesia(date('Y-m-d H:i:s')) ?></div>
@@ -590,9 +596,15 @@
                             </a>
                         </div>
                         <div class="col-6 p-2">
-                            <a href="<?= base_url('/admin/akademik/tahun-ajar') ?>" class="action-btn">
+                            <a href="<?= base_url('/admin/pengaturan?tab=tahun-ajar') ?>" class="action-btn">
                                 <i class="fas fa-calendar-alt text-success"></i>
                                 <span class="small font-weight-bold">Tahun Ajaran</span>
+                            </a>
+                        </div>
+                        <div class="col-6 p-2">
+                            <a href="<?= base_url('/admin/kelompok') ?>" class="action-btn">
+                                <i class="fas fa-copy text-info"></i>
+                                <span class="small font-weight-bold">Carry-over Kelompok</span>
                             </a>
                         </div>
                         <div class="col-6 p-2">

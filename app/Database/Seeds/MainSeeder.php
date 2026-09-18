@@ -10,6 +10,7 @@ class MainSeeder extends Seeder
     {
         $this->call('TahunAjarSeeder');
         $this->call('UsersSeeder');
+        $this->call('RefMapelSeeder');
         $this->call('GuruSeeder');
         $this->call('SupervisorSeeder');
         $this->call('JenisPenilaianSeeder');

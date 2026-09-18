@@ -61,6 +61,7 @@
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form action="<?= base_url('/admin/instrumen/aspek-penilaian/' . ($aspek['id'] ?? '') . '/update') ?>" method="post">
+                                                <?= csrf_field(); ?>
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Edit Aspek Penilaian</h5>
                                                     <button type="button" class="close" data-dismiss="modal">
@@ -133,6 +134,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form action="<?= base_url('/admin/instrumen/aspek-penilaian/create') ?>" method="post" id="createAspekForm">
+                <?= csrf_field(); ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Tambah Aspek Penilaian</h5>
                     <button type="button" class="close" data-dismiss="modal">

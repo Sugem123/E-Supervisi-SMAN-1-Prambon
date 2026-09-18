@@ -121,7 +121,12 @@
                         <tr>
                             <td>I</td>
                             <td>STATUS_KEPEGAWAIAN</td>
-                            <td>Pilih: PNS/PPPK/Honorer</td>
+                            <td>Pilih: PNS/PPPK/GTT/PTT/Honorer/Kontrak</td>
+                        </tr>
+                        <tr>
+                            <td>J</td>
+                            <td>JENIS_PTK</td>
+                            <td>Pilih: Guru/Tendik (default Guru)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -133,7 +138,8 @@
                 <li>Password minimal 6 karakter</li>
                 <li>Email harus dalam format yang valid</li>
                 <li>NIP harus 18 digit untuk PNS/PPPK</li>
-                <li>Status kepegawaian harus dipilih dari: PNS/PPPK/Honorer</li>
+                <li>Status kepegawaian harus dipilih dari: PNS/PPPK/GTT/PTT/Honorer/Kontrak</li>
+                <li>Jenis PTK harus Guru atau Tendik</li>
             </ul>
         </div>
     </div>

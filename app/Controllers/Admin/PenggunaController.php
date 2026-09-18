@@ -5,8 +5,17 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Models\UserModel;
 use App\Models\GuruModel;
+use App\Models\RefMapelModel;
 use App\Models\SupervisorModel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 class PenggunaController extends BaseController
 {
@@ -207,8 +216,9 @@ class PenggunaController extends BaseController
     public function guru()
     {
         $data['gurus'] = $this->guruModel
-            ->select('guru.*, guru.user_id as account_id, users.username, users.email, guru.is_supervisor')
+            ->select('guru.*, guru.user_id as account_id, users.username, users.email, guru.is_supervisor, ref_mapel.nama_mapel as nama_mapel_ref')
             ->join('users', 'users.id = guru.user_id', 'left')
+            ->join('ref_mapel', 'ref_mapel.id = guru.mapel_id', 'left')
             ->findAll();
         return view('admin/pengguna/guru', $data);
     }
@@ -225,7 +235,39 @@ class PenggunaController extends BaseController
 
     public function create()
     {
-        return view('admin/pengguna/create');
+        $data['mapels'] = $this->getActiveMapels();
+        return view('admin/pengguna/create', $data);
+    }
+
+    private function getActiveMapels(): array
+    {
+        try {
+            if (!\Config\Database::connect()->tableExists('ref_mapel')) {
+                return [];
+            }
+            return (new RefMapelModel())->where('status', 'Aktif')->orderBy('nama_mapel', 'ASC')->findAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    private function resolveMapelId($mapelId, $mapelName = null)
+    {
+        if ($mapelId !== null && $mapelId !== '') {
+            return (int) $mapelId;
+        }
+        if ($mapelName !== null && $mapelName !== '') {
+            try {
+                if (!\Config\Database::connect()->tableExists('ref_mapel')) {
+                    return null;
+                }
+                $row = (new RefMapelModel())->where('nama_mapel', trim((string) $mapelName))->first();
+                return $row['id'] ?? null;
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     public function store()
@@ -237,6 +279,9 @@ class PenggunaController extends BaseController
             'email' => 'required|valid_email|is_unique[users.email]',
             'password' => 'required|min_length[8]',
             'role' => 'required|in_list[admin,kepala,supervisor,guru]',
+            'jenis_ptk' => 'permit_empty|in_list[Guru,Tendik]',
+            'mapel_id' => 'permit_empty|integer',
+            'status_kepegawaian' => 'permit_empty|in_list[PNS,PPPK,GTT,PTT,Honorer,Kontrak]',
         ];
 
         if (!$this->validate($rules)) {
@@ -267,6 +312,8 @@ class PenggunaController extends BaseController
                         'nip' => $this->request->getPost('nip'),
                         'pangkat_golongan' => $this->request->getPost('pangkat_golongan'),
                         'mata_pelajaran' => $this->request->getPost('mata_pelajaran'),
+                        'mapel_id' => $this->resolveMapelId($this->request->getPost('mapel_id'), $this->request->getPost('mata_pelajaran')),
+                        'jenis_ptk' => $this->request->getPost('jenis_ptk') ?: 'Guru',
                         'status_kepegawaian' => $this->request->getPost('status_kepegawaian'),
                         'is_supervisor' => $isSupervisor, // Set is_supervisor field
                         'created_at' => date('Y-m-d H:i:s')
@@ -324,6 +371,7 @@ class PenggunaController extends BaseController
         }
 
         $data['guru'] = $this->guruModel->where('user_id', $id)->first();
+        $data['mapels'] = $this->getActiveMapels();
         return view('admin/pengguna/edit_guru', $data);
     }
 
@@ -383,6 +431,9 @@ class PenggunaController extends BaseController
 
         $rules = [
             'nama' => 'required',
+            'jenis_ptk' => 'permit_empty|in_list[Guru,Tendik]',
+            'mapel_id' => 'permit_empty|integer',
+            'status_kepegawaian' => 'permit_empty|in_list[PNS,PPPK,GTT,PTT,Honorer,Kontrak]',
         ];
 
         if (!$this->validate($rules)) {
@@ -411,6 +462,8 @@ class PenggunaController extends BaseController
             'nip' => $this->request->getPost('nip'),
             'pangkat_golongan' => $this->request->getPost('pangkat_golongan'),
             'mata_pelajaran' => $this->request->getPost('mata_pelajaran'),
+            'mapel_id' => $this->resolveMapelId($this->request->getPost('mapel_id'), $this->request->getPost('mata_pelajaran')),
+            'jenis_ptk' => $this->request->getPost('jenis_ptk') ?: 'Guru',
             'status_kepegawaian' => $this->request->getPost('status_kepegawaian'),
             'is_supervisor' => $isSupervisor // Set is_supervisor field
         ];
@@ -622,6 +675,7 @@ class PenggunaController extends BaseController
         $sheet->setCellValue('G1', 'PANGKAT_GOLONGAN');
         $sheet->setCellValue('H1', 'MATA_PELAJARAN');
         $sheet->setCellValue('I1', 'STATUS_KEPEGAWAIAN');
+        $sheet->setCellValue('J1', 'JENIS_PTK');
 
         // Add data validation for ROLE column
         $roleValidation = new \PhpOffice\PhpSpreadsheet\Cell\DataValidation();
@@ -649,11 +703,25 @@ class PenggunaController extends BaseController
         $statusValidation->setError('Value is not in list.');
         $statusValidation->setPromptTitle('Pick from list');
         $statusValidation->setPrompt('Please pick a value from the drop-down list.');
-        $statusValidation->setFormula1('"PNS,PPPK,Honorer"');
+        $statusValidation->setFormula1('"PNS,PPPK,GTT,PTT,Honorer,Kontrak"');
+
+        $jenisValidation = new \PhpOffice\PhpSpreadsheet\Cell\DataValidation();
+        $jenisValidation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+        $jenisValidation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+        $jenisValidation->setAllowBlank(true);
+        $jenisValidation->setShowInputMessage(true);
+        $jenisValidation->setShowErrorMessage(true);
+        $jenisValidation->setShowDropDown(true);
+        $jenisValidation->setErrorTitle('Input error');
+        $jenisValidation->setError('Value is not in list.');
+        $jenisValidation->setPromptTitle('Pick from list');
+        $jenisValidation->setPrompt('Please pick a value from the drop-down list.');
+        $jenisValidation->setFormula1('"Guru,Tendik"');
 
         // Apply data validation
         $sheet->setDataValidation('D2:D1000', $roleValidation);
         $sheet->setDataValidation('I2:I1000', $statusValidation);
+        $sheet->setDataValidation('J2:J1000', $jenisValidation);
 
         // Add sample data row
         $sheet->setCellValue('A2', 'joko_susilo');
@@ -665,6 +733,7 @@ class PenggunaController extends BaseController
         $sheet->setCellValue('G2', 'Penata Muda Tk. I/III b');
         $sheet->setCellValue('H2', 'Matematika');
         $sheet->setCellValue('I2', 'PNS');
+        $sheet->setCellValue('J2', 'Guru');
 
         // Set column widths
         $sheet->getColumnDimension('A')->setWidth(15);
@@ -676,6 +745,7 @@ class PenggunaController extends BaseController
         $sheet->getColumnDimension('G')->setWidth(25);
         $sheet->getColumnDimension('H')->setWidth(20);
         $sheet->getColumnDimension('I')->setWidth(20);
+        $sheet->getColumnDimension('J')->setWidth(15);
 
         // Set header style
         $headerStyle = [
@@ -690,7 +760,7 @@ class PenggunaController extends BaseController
             ]
         ];
 
-        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
 
         // Redirect output to a client's web browser (Xlsx)
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -751,18 +821,25 @@ class PenggunaController extends BaseController
                     }
 
                     // Extract data from row
-                    $username = $row[0] ?? '';
-                    $password = $row[1] ?? '';
-                    $email = $row[2] ?? '';
-                    $role = $row[3] ?? '';
-                    $namaLengkap = $row[4] ?? '';
-                    $nip = $row[5] ?? '';
-                    $pangkatGolongan = $row[6] ?? '';
-                    $mataPelajaran = $row[7] ?? '';
-                    $statusKepegawaian = $row[8] ?? '';
+                    $username = trim((string) ($row[0] ?? ''));
+                    $password = (string) ($row[1] ?? '');
+                    $email = trim((string) ($row[2] ?? ''));
+                    $role = strtolower(trim((string) ($row[3] ?? '')));
+                    $namaLengkap = trim((string) ($row[4] ?? ''));
+                    $nip = trim((string) ($row[5] ?? ''));
+                    $pangkatGolongan = trim((string) ($row[6] ?? ''));
+                    $mataPelajaran = trim((string) ($row[7] ?? ''));
+                    $statusKepegawaian = strtoupper(trim((string) ($row[8] ?? '')));
+                    $jenisPtk = ucfirst(strtolower(trim((string) ($row[9] ?? 'Guru'))));
+                    if ($jenisPtk === '') {
+                        $jenisPtk = 'Guru';
+                    }
 
                     // Validate data
                     $errors = [];
+                    $allowedRoles = ['guru', 'supervisor', 'kepala', 'admin'];
+                    $allowedStatus = ['PNS', 'PPPK', 'GTT', 'PTT', 'Honorer', 'Kontrak'];
+                    $allowedJenis = ['Guru', 'Tendik'];
 
                     // Check if username already exists
                     if (empty($username)) {
@@ -779,6 +856,16 @@ class PenggunaController extends BaseController
                     // Check email format
                     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                         $errors[] = "Format email tidak valid";
+                    }
+
+                    if (!in_array($role, $allowedRoles, true)) {
+                        $errors[] = "Role harus salah satu: guru/supervisor/kepala/admin";
+                    }
+                    if ($statusKepegawaian !== '' && !in_array($statusKepegawaian, $allowedStatus, true)) {
+                        $errors[] = "Status kepegawaian harus salah satu: PNS/PPPK/GTT/PTT/Honorer/Kontrak";
+                    }
+                    if (!in_array($jenisPtk, $allowedJenis, true)) {
+                        $errors[] = "Jenis PTK harus Guru atau Tendik";
                     }
 
                     // Check NIP for PNS/PPPK
@@ -830,6 +917,8 @@ class PenggunaController extends BaseController
                         'nip' => $nip,
                         'pangkat_golongan' => $pangkatGolongan,
                         'mata_pelajaran' => $mataPelajaran,
+                        'mapel_id' => $this->resolveMapelId(null, $mataPelajaran),
+                        'jenis_ptk' => $jenisPtk,
                         'status_kepegawaian' => $statusKepegawaian,
                         'created_at' => date('Y-m-d H:i:s')
                     ];
@@ -940,5 +1029,252 @@ class PenggunaController extends BaseController
         }
 
         return "Guru data cleanup completed";
+    }
+
+    /**
+     * Download Rekapitulasi Akun Pengguna (Username & Password) dalam bentuk Excel (.xlsx)
+     * Lengkap dengan styling header, zebra striping, dan border tabel rapi.
+     */
+    public function exportRekapAkun()
+    {
+        try {
+            $users = $this->userModel
+                ->select('users.id, users.username, users.email, users.nip as user_nip, users.role, users.status, users.password, users.last_login, guru.nama as nama_guru, guru.nip as guru_nip, guru.mata_pelajaran, guru.jenis_ptk')
+                ->join('guru', 'guru.user_id = users.id', 'left')
+                ->orderBy('users.role', 'ASC')
+                ->orderBy('users.username', 'ASC')
+                ->findAll();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Rekap Akun Pengguna');
+
+            // Page Setup A4 Landscape
+            $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
+            $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
+
+            // Judul Dokumen (KOP)
+            $sheet->setCellValue('A1', 'REKAPITULASI AKUN PENGGUNA (USERNAME & PASSWORD)');
+            $sheet->mergeCells('A1:I1');
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setName('Segoe UI');
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $namaSekolah = function_exists('get_nama_sekolah') ? get_nama_sekolah() : 'SISTEM INFORMASI SUPERVISI AKADEMIK';
+            $sheet->setCellValue('A2', strtoupper($namaSekolah));
+            $sheet->mergeCells('A2:I2');
+            $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12)->setName('Segoe UI');
+            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->setCellValue('A3', 'Tanggal Unduh: ' . date('d F Y, H:i') . ' WIB  |  Total: ' . count($users) . ' Akun Pengguna');
+            $sheet->mergeCells('A3:I3');
+            $sheet->getStyle('A3')->getFont()->setItalic(true)->setSize(9.5)->setName('Segoe UI')->getColor()->setARGB('FF64748B');
+            $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // Table Header
+            $headerRow = 5;
+            $sheet->getRowDimension($headerRow)->setRowHeight(28);
+
+            $headers = [
+                'A' => 'NO',
+                'B' => 'NAMA LENGKAP',
+                'C' => 'NIP',
+                'D' => 'ROLE / JABATAN',
+                'E' => 'USERNAME',
+                'F' => 'PASSWORD',
+                'G' => 'STATUS PASSWORD',
+                'H' => 'EMAIL',
+                'I' => 'STATUS AKUN',
+            ];
+
+            foreach ($headers as $col => $title) {
+                $sheet->setCellValue($col . $headerRow, $title);
+            }
+
+            // Header Style
+            $headerRange = 'A' . $headerRow . ':I' . $headerRow;
+            $sheet->getStyle($headerRange)->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'color' => ['argb' => 'FFFFFFFF'],
+                    'size' => 10,
+                    'name' => 'Segoe UI',
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['argb' => 'FF1E3A8A'], // Navy Blue
+                ],
+            ]);
+
+            // Table Data Rows
+            $currentRow = $headerRow + 1;
+            $no = 1;
+
+            foreach ($users as $u) {
+                $sheet->getRowDimension($currentRow)->setRowHeight(22);
+
+                $namaLengkap = !empty($u['nama_guru']) ? $u['nama_guru'] : (!empty($u['username']) ? $u['username'] : '-');
+                $nip = !empty($u['user_nip']) ? $u['user_nip'] : (!empty($u['guru_nip']) ? $u['guru_nip'] : '-');
+                $username = (string) ($u['username'] ?? '-');
+                $email = (string) ($u['email'] ?? '-');
+                $role = ucfirst((string) ($u['role'] ?? '-'));
+                $statusAkun = ucfirst(strtolower((string) ($u['status'] ?? 'Aktif')));
+
+                // Deteksi Password (Default / Custom)
+                $passwordHash = (string) ($u['password'] ?? '');
+                $passwordText = '12345678';
+                $passwordStatus = 'Default';
+
+                if (!empty($passwordHash)) {
+                    if (password_verify('admin123', $passwordHash)) {
+                        $passwordText = 'admin123';
+                        $passwordStatus = 'Default (admin123)';
+                    } elseif (password_verify('12345678', $passwordHash)) {
+                        $passwordText = '12345678';
+                        $passwordStatus = 'Default (12345678)';
+                    } elseif (password_verify('123456', $passwordHash)) {
+                        $passwordText = '123456';
+                        $passwordStatus = 'Default (123456)';
+                    } elseif (!empty($u['username']) && password_verify($u['username'], $passwordHash)) {
+                        $passwordText = $u['username'];
+                        $passwordStatus = 'Sesuai Username';
+                    } elseif (!empty($nip) && $nip !== '-' && password_verify($nip, $passwordHash)) {
+                        $passwordText = $nip;
+                        $passwordStatus = 'Sesuai NIP';
+                    } else {
+                        // Password telah diubah oleh pengguna menjadi password rahasia pribadi
+                        $passwordText = '12345678*';
+                        $passwordStatus = 'Telah Diubah Pengguna';
+                    }
+                }
+
+                $sheet->setCellValue('A' . $currentRow, $no++);
+                $sheet->setCellValue('B' . $currentRow, $namaLengkap);
+                $sheet->setCellValueExplicit('C' . $currentRow, $nip, DataType::TYPE_STRING);
+                $sheet->setCellValue('D' . $currentRow, $role);
+                $sheet->setCellValueExplicit('E' . $currentRow, $username, DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit('F' . $currentRow, $passwordText, DataType::TYPE_STRING);
+                $sheet->setCellValue('G' . $currentRow, $passwordStatus);
+                $sheet->setCellValue('H' . $currentRow, $email);
+                $sheet->setCellValue('I' . $currentRow, $statusAkun);
+
+                // Zebra striping
+                if ($no % 2 === 0) {
+                    $sheet->getStyle('A' . $currentRow . ':I' . $currentRow)->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()->setARGB('FFF8FAFC');
+                }
+
+                $currentRow++;
+            }
+
+            $lastDataRow = $currentRow - 1;
+
+            // Border Styling untuk Seluruh Tabel (Thin Borders + Medium Outline)
+            $tableRange = 'A' . $headerRow . ':I' . $lastDataRow;
+            $sheet->getStyle($tableRange)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['argb' => 'FFCBD5E1'],
+                    ],
+                    'outline' => [
+                        'borderStyle' => Border::BORDER_MEDIUM,
+                        'color' => ['argb' => 'FF1E3A8A'],
+                    ],
+                ],
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'font' => [
+                    'size' => 10,
+                    'name' => 'Segoe UI',
+                ],
+            ]);
+
+            // Alignment format
+            $sheet->getStyle('A' . ($headerRow + 1) . ':A' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('C' . ($headerRow + 1) . ':D' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('F' . ($headerRow + 1) . ':G' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('I' . ($headerRow + 1) . ':I' . $lastDataRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // Bold styling untuk Nama, Username, dan Password
+            $sheet->getStyle('B' . ($headerRow + 1) . ':B' . $lastDataRow)->getFont()->setBold(true);
+            $sheet->getStyle('E' . ($headerRow + 1) . ':F' . $lastDataRow)->getFont()->setBold(true);
+
+            // Status Akun Badges
+            for ($r = $headerRow + 1; $r <= $lastDataRow; $r++) {
+                $statusVal = $sheet->getCell('I' . $r)->getValue();
+                if ($statusVal === 'Aktif') {
+                    $sheet->getStyle('I' . $r)->getFont()->getColor()->setARGB('FF15803D'); // Dark Green
+                    $sheet->getStyle('I' . $r)->getFont()->setBold(true);
+                } else {
+                    $sheet->getStyle('I' . $r)->getFont()->getColor()->setARGB('FFB91C1C'); // Red
+                    $sheet->getStyle('I' . $r)->getFont()->setBold(true);
+                }
+            }
+
+            // Catatan & Petunjuk Keamanan Akun
+            $noteStart = $lastDataRow + 2;
+            $sheet->setCellValue('A' . $noteStart, 'Petunjuk & Catatan Keamanan Akun:');
+            $sheet->getStyle('A' . $noteStart)->getFont()->setBold(true)->setSize(10)->setName('Segoe UI');
+
+            $sheet->setCellValue('A' . ($noteStart + 1), '1. Password default sistem saat akun dibuat atau direset adalah: 12345678 (atau 123456).');
+            $sheet->setCellValue('A' . ($noteStart + 2), '2. Tanda bintang (*) pada kolom Password menandakan pengguna telah mengubah password aslinya. Nilai 12345678 adalah password default jika akun perlu di-reset.');
+            $sheet->setCellValue('A' . ($noteStart + 3), '3. Jika pengguna lupa password, Administrator dapat melakukan Reset Password kembali ke 12345678 melalui menu Manajemen Pengguna.');
+            $sheet->setCellValue('A' . ($noteStart + 4), '4. Dokumen ini memuat informasi kredensial rahasia. Harap disimpan secara aman dan tidak disebarluaskan secara publik.');
+
+            $sheet->getStyle('A' . ($noteStart + 1) . ':A' . ($noteStart + 4))->getFont()->setSize(9)->setName('Segoe UI')->getColor()->setARGB('FF475569');
+
+            // Auto-size kolom dengan lebar minimum proporsional
+            foreach (range('A', 'I') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            // Set lebar kolom ideal
+            $minWidths = [
+                'A' => 6,
+                'B' => 30,
+                'C' => 22,
+                'D' => 16,
+                'E' => 20,
+                'F' => 18,
+                'G' => 24,
+                'H' => 28,
+                'I' => 14,
+            ];
+
+            foreach ($minWidths as $col => $w) {
+                if ($sheet->getColumnDimension($col)->getWidth() < $w) {
+                    $sheet->getColumnDimension($col)->setAutoSize(false);
+                    $sheet->getColumnDimension($col)->setWidth($w);
+                }
+            }
+
+            // Freeze pane di bawah header tabel
+            $sheet->freezePane('A' . ($headerRow + 1));
+
+            // Set HTTP Headers untuk download file Excel
+            $filename = 'rekap-akun-pengguna-' . date('Y-m-d') . '.xlsx';
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->setPreCalculateFormulas(false);
+
+            if (ob_get_length()) {
+                ob_end_clean();
+            }
+
+            $writer->save('php://output');
+            exit();
+        } catch (\Exception $e) {
+            log_message('error', 'Export Rekap Akun Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mendownload rekap akun: ' . $e->getMessage());
+        }
     }
 }

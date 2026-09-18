@@ -23,30 +23,40 @@
             <?php endif; ?>
 
             <form action="<?= base_url('/admin/akademik/kelas/' . $kelas['id'] . '/update') ?>" method="post">
+                <?= csrf_field() ?>
                 <div class="form-row">
                     <div class="form-group col-md-3">
                         <label>Nama Kelas</label>
                         <input type="text" class="form-control" name="nama_kelas" placeholder="Contoh: X IPA 1"
                             value="<?= esc($kelas['nama_kelas']) ?>" required>
                     </div>
-                    <div class="form-group col-md-3">
-                        <label>Tahun Ajaran</label>
-                        <select class="form-control" name="tahun_ajar_id" required>
-                            <option value="">Pilih Tahun Ajaran</option>
-                            <?php foreach ($tahun_ajars as $tahun): ?>
-                                <option value="<?= $tahun['id'] ?>" <?= $kelas['tahun_ajar_id'] == $tahun['id'] ? 'selected' : '' ?>>
-                                    <?= $tahun['tahun_ajar'] ?> - <?= $tahun['semester'] ?>
-                                </option>
-                            <?php endforeach; ?>
+                    <div class="form-group col-md-2">
+                        <label>Tingkat</label>
+                        <select class="form-control" name="tingkat">
+                            <option value="">Pilih Tingkat</option>
+                            <option value="X" <?= ($kelas['tingkat'] ?? '') == 'X' ? 'selected' : '' ?>>X</option>
+                            <option value="XI" <?= ($kelas['tingkat'] ?? '') == 'XI' ? 'selected' : '' ?>>XI</option>
+                            <option value="XII" <?= ($kelas['tingkat'] ?? '') == 'XII' ? 'selected' : '' ?>>XII</option>
                         </select>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label>Jurusan</label>
+                        <input type="text" class="form-control" name="jurusan" placeholder="Contoh: IPA/IPS/Bahasa"
+                            value="<?= esc($kelas['jurusan'] ?? '') ?>">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Tahun Ajaran <span class="badge badge-success ml-1"><i class="fas fa-lock mr-1"></i>Terkunci</span></label>
+                        <input type="text" class="form-control bg-light font-weight-bold" 
+                            value="<?= esc(($kelas['tahun_ajar'] ?? '-') . ' - ' . ($kelas['semester'] ?? '-')) ?>" readonly title="Tahun ajaran terkunci">
+                        <input type="hidden" name="tahun_ajar_id" value="<?= esc($kelas['tahun_ajar_id']) ?>">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Wali Kelas <small class="text-muted">(Total: <?= count($gurus) ?>)</small></label>
-                        <select class="form-control" name="wali_kelas" required>
-                            <option value="">Pilih Wali Kelas</option>
+                        <select class="form-control" name="wali_kelas">
+                            <option value="">-- Pilih Wali Kelas (Opsional) --</option>
                             <?php foreach ($gurus as $guru): ?>
                                 <option value="<?= $guru['id'] ?>" <?= $kelas['wali_kelas'] == $guru['id'] ? 'selected' : '' ?>>
-                                    <?= $guru['nama'] ?>
+                                    <?= esc($guru['nama']) ?><?= !empty($guru['nip']) ? ' (' . esc($guru['nip']) . ')' : '' ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

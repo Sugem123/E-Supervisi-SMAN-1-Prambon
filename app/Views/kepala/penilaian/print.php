@@ -122,7 +122,7 @@
                 <div class="page-break"></div>
                 <div class="header">
                     <h1>HASIL PENILAIAN SUPERVISI GURU</h1>
-                    <h2><?= strtoupper(get_nama_madrasah()) ?></h2>
+                    <h2><?= strtoupper(get_nama_sekolah()) ?></h2>
                 </div>
                 
                 <div class="section">
@@ -213,7 +213,7 @@
             </div>
             
             <div class="signature-box">
-                <p><?= get_nama_madrasah() ?>, <?= format_tanggal_indonesia(date('Y-m-d')) ?></p>
+                <p><?= get_nama_sekolah() ?>, <?= format_tanggal_indonesia(date('Y-m-d')) ?></p>
                 <p>Supervisor,</p>
                 <div class="signature-line">
                     (<?= $schedule['nama_supervisor'] ?? get_nama_kepala() ?>)

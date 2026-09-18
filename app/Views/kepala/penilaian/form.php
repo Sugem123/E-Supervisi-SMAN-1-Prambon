@@ -558,6 +558,20 @@ $(document).ready(function() {
         4: { kategori: "Sangat Baik", catatan: "Sangat Baik, Memiliki bukti dukung yang lengkap dan sepenuhnya sesuai." }
     };
 
+    // Buka tab berdasarkan URL hash saat halaman dimuat
+    var initialHash = window.location.hash;
+    if (initialHash && $('#assessmentTabs a[href="' + initialHash + '"]').length) {
+        $('#assessmentTabs a[href="' + initialHash + '"]').tab('show');
+    }
+
+    // Update URL hash saat tab diganti
+    $('#assessmentTabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var targetHash = $(e.target).attr('href');
+        if (targetHash && window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, targetHash);
+        }
+    });
+
     // Auto-fill catatan saat dropdown skor berubah
     $(document).on('change', '.skala-dropdown', function() {
         var dropdown = $(this);
@@ -725,8 +739,11 @@ $(document).ready(function() {
         var activeTabPane = $('#step-' + tabId);
         activeTabPane.find('.skala-dropdown').each(function() {
             var dropdown = $(this);
-            var aspekId = dropdown.data('aspek');
-            var catatanField = activeTabPane.find('.catatan-field[data-aspek="' + aspekId + '"]');
+            var catatanField = dropdown.closest('tr').find('.catatan-field');
+            if (!catatanField.length) {
+                var aspekId = dropdown.data('aspek');
+                catatanField = activeTabPane.find('.catatan-field[data-aspek="' + aspekId + '"]');
+            }
             
             dropdown.val(selectedScore);
             

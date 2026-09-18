@@ -6,7 +6,8 @@
  * --------------------------------------------------------------------
  */
 
-$routes->group('supervisor', ['filter' => 'role:supervisor'], function ($routes) {
+$routes->group('supervisor', ['filter' => 'auth:supervisor'], function ($routes) {
+    $routes->get('', 'Supervisor\DashboardController::index');
     $routes->get('/', 'Supervisor\DashboardController::index');
     $routes->get('dashboard', 'Supervisor\DashboardController::index');
 

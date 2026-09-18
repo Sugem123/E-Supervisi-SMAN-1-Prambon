@@ -8,8 +8,46 @@ class JenisPenilaianModel extends Model
 {
     protected $table = 'jenis_penilaian';
     protected $primaryKey = 'id';
-    protected $allowedFields = ['nama', 'skor_maksimal', 'kategori_skor', 'created_at'];
+    protected $allowedFields = ['nama', 'skor_maksimal', 'kategori_skor', 'status', 'created_at'];
     protected $useTimestamps = false;
+
+    /**
+     * Hanya jenis yang Aktif — dipakai form penilaian baru.
+     * Histori/laporan tetap pakai findAll* agar data Nonaktif terbaca.
+     */
+    public function findAllActiveWithMappedColumns()
+    {
+        $results = $this->where('status', 'Aktif')->findAll();
+        // Fallback BC: kolom status belum ada (migrasi belum jalan) -> tampilkan semua
+        if (empty($results) && $this->db->tableExists($this->table)) {
+            try {
+                $fields = $this->db->getFieldNames($this->table);
+                if (!in_array('status', $fields, true)) {
+                    $results = $this->findAll();
+                }
+            } catch (\Throwable $e) {
+                $results = $this->findAll();
+            }
+        }
+        return $this->mapColumns($results);
+    }
+
+    public function isActive(int $id): bool
+    {
+        try {
+            $row = $this->find($id);
+            if (!$row) {
+                return false;
+            }
+            // BC: tanpa kolom status dianggap Aktif
+            if (!array_key_exists('status', $row)) {
+                return true;
+            }
+            return ($row['status'] ?? 'Aktif') === 'Aktif';
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
     
     // Method to get data with mapped column names for our application
     public function findAllWithMappedColumns()

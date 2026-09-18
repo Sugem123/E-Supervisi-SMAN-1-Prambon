@@ -2,8 +2,10 @@
 
 use CodeIgniter\Router\RouteCollection;
 
-$routes->group('kepala', ['filter' => 'auth', 'namespace' => 'App\Controllers\Kepala'], function (RouteCollection $routes) {
+$routes->group('kepala', ['filter' => 'auth:kepala', 'namespace' => 'App\Controllers\Kepala'], function (RouteCollection $routes) {
     // Dashboard routes
+    $routes->get('', 'DashboardController::index');
+    $routes->get('/', 'DashboardController::index');
     $routes->get('dashboard', 'DashboardController::index');
     $routes->get('dashboard/performance', 'DashboardController::performance');
 

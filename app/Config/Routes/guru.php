@@ -6,8 +6,11 @@
  * --------------------------------------------------------------------
  */
 
-$routes->group('guru', ['filter' => 'auth', 'args' => ['guru']], function ($routes) {
+$routes->group('guru', ['filter' => 'auth:guru'], function ($routes) {
+    $routes->get('', 'Guru\DashboardController::index');
     $routes->get('/', 'Guru\DashboardController::index');
+    $routes->get('dashboard', 'Guru\DashboardController::index');
+    $routes->get('dashboard/kinerja', 'Guru\DashboardController::kinerja');
 
     // Profile routes
     $routes->get('profile/edit', 'Guru\ProfileController::edit');

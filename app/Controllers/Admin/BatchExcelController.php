@@ -108,8 +108,8 @@ class BatchExcelController extends BaseController
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 
-                // School name
-                $sheet->setCellValue('A2', get_nama_madrasah());
+                // School name (SMA, legacy wrapper kept in helper).
+                $sheet->setCellValue('A2', get_nama_sekolah());
                 $sheet->mergeCells('A2:H2');
                 $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(14);
                 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

@@ -20,7 +20,10 @@ class HasilSupervisiModel extends Model
         'total_skor',
         'nilai_akhir',
         'ketercapaian',
-        'rekomendasi'
+        'rekomendasi',
+        'berita_acara_path',
+        'link_video',
+        'rtl'
     ];
     protected $useTimestamps = false;
     protected $createdField  = 'created_at';

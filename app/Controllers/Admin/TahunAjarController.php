@@ -77,8 +77,20 @@ class TahunAjarController extends BaseController
     {
         // Check if active
         $item = $this->tahunAjarModel->find($id);
+        if (!$item) {
+            return redirect()->to('/admin/pengaturan?tab=tahun-ajar')->with('error', 'Data tahun ajaran tidak ditemukan.');
+        }
         if ($item['status_aktif'] == 'Aktif') {
             return redirect()->to('/admin/pengaturan?tab=tahun-ajar')->with('error', 'Tidak dapat menghapus Tahun Ajaran yang sedang Aktif!');
+        }
+
+        // Proteksi arsip: tahun Nonaktif yang masih punya jadwal/kelas/kelompok tidak boleh dihapus.
+        $db = \Config\Database::connect();
+        $jadwalCount = $db->table('jadwal_supervisi')->where('tahun_ajar_id', $id)->countAllResults();
+        $kelasCount = $db->table('kelas')->where('tahun_ajar_id', $id)->countAllResults();
+        $kelompokCount = $db->table('kelompok_supervisi')->where('tahun_ajar_id', $id)->countAllResults();
+        if (($jadwalCount + $kelasCount + $kelompokCount) > 0) {
+            return redirect()->to('/admin/pengaturan?tab=tahun-ajar')->with('error', 'Arsip tahun ini masih dipakai (' . $jadwalCount . ' jadwal, ' . $kelasCount . ' kelas, ' . $kelompokCount . ' kelompok). Hapus arsip hanya bila data historis sudah tidak dibutuhkan.');
         }
 
         $this->tahunAjarModel->delete($id);

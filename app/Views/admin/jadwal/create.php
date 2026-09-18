@@ -66,6 +66,26 @@
                                 <label for="mata_pelajaran">Mata Pelajaran</label>
                                 <input type="text" class="form-control" id="mata_pelajaran" name="mata_pelajaran" required>
                             </div>
+
+                            <div class="form-group">
+                                <label for="mapel_id">Referensi Mapel SMA (Opsional)</label>
+                                <select class="form-control" id="mapel_id" name="mapel_id">
+                                    <option value="">-- Tanpa referensi mapel --</option>
+                                    <?php foreach (($mapels ?? []) as $mapel): ?>
+                                        <option value="<?= $mapel['id'] ?>"><?= esc($mapel['nama_mapel']) ?><?= !empty($mapel['kelompok']) ? ' (Kel. ' . esc($mapel['kelompok']) . ')' : '' ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="kelompok_id">Kelompok Supervisi (Opsional)</label>
+                                <select class="form-control" id="kelompok_id" name="kelompok_id">
+                                    <option value="">-- Tanpa kelompok --</option>
+                                    <?php foreach (($kelompoks ?? []) as $kelompok): ?>
+                                        <option value="<?= $kelompok['id'] ?>"><?= esc($kelompok['nama_kelompok']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             
                             <div class="form-group">
                                 <label for="kelas_id">Kelas</label>

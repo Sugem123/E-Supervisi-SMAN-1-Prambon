@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Logo sekolah belum diatur">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="224" height="224" rx="56" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="10 8"/>
+  <rect x="48" y="48" width="144" height="144" rx="36" fill="url(#g)" opacity="0.14"/>
+  <g fill="none" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <path d="M120 78 L178 104 L120 130 L62 104 Z"/>
+    <path d="M84 118 v26 c0 14 72 14 72 0 v-26"/>
+    <circle cx="120" cy="96" r="4" fill="#1d4ed8" stroke="none"/>
+  </g>
+  <text x="120" y="182" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="17" font-weight="700" fill="#64748b" letter-spacing="2">LOGO</text>
+</svg>

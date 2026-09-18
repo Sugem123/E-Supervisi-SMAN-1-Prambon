@@ -47,6 +47,7 @@
                             <th>Nama</th>
                             <th>NIP</th>
                             <th>Email</th>
+                            <th>Jenis PTK</th>
                             <th>Mata Pelajaran</th>
                             <th>Status Kepegawaian</th>
                             <th>Status</th>
@@ -62,7 +63,8 @@
                                 <td><?= esc($guru['nama']); ?></td>
                                 <td><?= esc($guru['nip'] ?? '-'); ?></td>
                                 <td><?= esc($guru['email'] ?? '-'); ?></td>
-                                <td><?= esc($guru['mata_pelajaran'] ?? '-'); ?></td>
+                                <td><?= esc($guru['jenis_ptk'] ?? 'Guru'); ?></td>
+                                <td><?= esc($guru['nama_mapel_ref'] ?? $guru['mata_pelajaran'] ?? '-'); ?></td>
                                 <td><?= esc($guru['status_kepegawaian'] ?? '-'); ?></td>
                                 <td>
                                     <?php if ($guru['user_status'] == 'Aktif') : ?>

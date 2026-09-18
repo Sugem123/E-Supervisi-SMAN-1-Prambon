@@ -13,8 +13,12 @@ use CodeIgniter\Router\RouteCollection;
  */
 
 // Admin routes
-$routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($routes) {
+$routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'auth:admin'], function ($routes) {
     // Dashboard route
+    // Catatan: tanpa 'as' di sini agar tidak menimpa nama kanonis admin/dashboard
+    // yang didefinisikan di Routes/dashboard.php. Daftarkan '' dan '/' agar
+    // '/admin' (tanpa slash) dan '/admin/' (dengan slash) sama-sama cocok.
+    $routes->get('', 'DashboardController::index');
     $routes->get('/', 'DashboardController::index');
     $routes->get('dashboard', 'DashboardController::index');
 
@@ -60,6 +64,20 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($rou
     $routes->post('supervisor/(:num)/update', 'SupervisorController::update/$1');
     $routes->get('supervisor/(:num)/delete', 'SupervisorController::delete/$1');
 
+    // Kelompok supervisi routes (SMA: Supervisor-Anggota)
+    $routes->get('kelompok', 'KelompokSupervisiController::index');
+    $routes->get('kelompok/create', 'KelompokSupervisiController::create');
+    $routes->post('kelompok/store', 'KelompokSupervisiController::store');
+    $routes->get('kelompok/(:num)', 'KelompokSupervisiController::show/$1');
+    $routes->get('kelompok/(:num)/edit', 'KelompokSupervisiController::edit/$1');
+    $routes->post('kelompok/(:num)/update', 'KelompokSupervisiController::update/$1');
+    $routes->get('kelompok/(:num)/delete', 'KelompokSupervisiController::delete/$1');
+    $routes->post('kelompok/carry-over', 'KelompokSupervisiController::carryOver');
+    $routes->post('kelompok/(:num)/generate-jadwal', 'KelompokSupervisiController::generateJadwal/$1');
+    $routes->post('kelompok/(:num)/add-anggota', 'KelompokSupervisiController::addAnggota/$1');
+    $routes->post('kelompok/(:num)/delete-anggota/(:num)', 'KelompokSupervisiController::deleteAnggota/$1/$2');
+    $routes->get('kelompok/(:num)/delete-anggota/(:num)', 'KelompokSupervisiController::deleteAnggota/$1/$2');
+
     // Pengguna routes
     $routes->get('pengguna', 'PenggunaController::index');
     $routes->get('pengguna/semua', 'PenggunaController::semua');
@@ -84,6 +102,11 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($rou
     $routes->post('pengguna/(:num)/reset-password', 'PenggunaController::resetPassword/$1');
     $routes->get('pengguna/(:num)/reset-password', 'PenggunaController::resetPassword/$1');
 
+    // Export Rekap Akun Pengguna (Username & Password)
+    $routes->get('pengguna/export-excel', 'PenggunaController::exportRekapAkun');
+    $routes->get('pengguna/export-rekap-akun', 'PenggunaController::exportRekapAkun');
+    $routes->get('pengguna/download-rekap', 'PenggunaController::exportRekapAkun');
+
     // Import Guru routes
     $routes->get('pengguna/import-guru', 'PenggunaController::importGuru');
     $routes->get('pengguna/import-guru/template', 'PenggunaController::downloadTemplate');
@@ -94,9 +117,15 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($rou
     $routes->post('akademik/tahun-ajar/create', 'AkademikController::createTahunAjar');
     $routes->post('akademik/tahun-ajar/(:num)/update', 'AkademikController::updateTahunAjar/$1');
     $routes->get('akademik/kelas', 'AkademikController::kelas');
+    $routes->get('akademik/kelas/template', 'AkademikController::downloadTemplateKelas');
+    $routes->post('akademik/kelas/import', 'AkademikController::processImportKelas');
     $routes->post('akademik/kelas/create', 'AkademikController::createKelas');
     $routes->get('akademik/kelas/(:num)/edit', 'AkademikController::editKelas/$1');
     $routes->post('akademik/kelas/(:num)/update', 'AkademikController::updateKelas/$1');
+    $routes->post('akademik/kelas/(:num)/update-wali', 'AkademikController::updateWaliKelas/$1');
+    $routes->post('akademik/kelas/update-wali', 'AkademikController::updateWaliKelas');
+    $routes->post('akademik/kelas/(:num)/delete', 'AkademikController::deleteKelas/$1');
+    $routes->get('akademik/kelas/(:num)/delete', 'AkademikController::deleteKelas/$1');
 
     // Instrumen routes
     $routes->get('instrumen', 'InstrumenController::index');
@@ -104,10 +133,12 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($rou
     $routes->post('instrumen/jenis-penilaian/create', 'InstrumenController::createJenisPenilaian');
     $routes->post('instrumen/jenis-penilaian/(:num)/update', 'InstrumenController::updateJenisPenilaian/$1');
     $routes->get('instrumen/jenis-penilaian/(:num)/delete', 'InstrumenController::deleteJenisPenilaian/$1');
+    $routes->post('instrumen/jenis-penilaian/(:num)/toggle-status', 'InstrumenController::toggleJenisStatus/$1');
     $routes->get('instrumen/aspek-penilaian', 'InstrumenController::aspekPenilaian');
     $routes->post('instrumen/aspek-penilaian/create', 'InstrumenController::createAspekPenilaian');
     $routes->post('instrumen/aspek-penilaian/(:num)/update', 'InstrumenController::updateAspekPenilaian/$1');
     $routes->get('instrumen/aspek-penilaian/(:num)/delete', 'InstrumenController::deleteAspekPenilaian/$1');
+    $routes->post('instrumen/aspek-penilaian/(:num)/toggle-status', 'InstrumenController::toggleAspekStatus/$1');
 
     // Jadwal routes
     $routes->get('jadwal', 'JadwalController::index');
@@ -128,6 +159,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin'], function ($rou
     $routes->get('penilaian/form/(:num)', 'PenilaianController::form/$1');
     $routes->post('penilaian/save', 'PenilaianController::save');
     $routes->post('penilaian/quick-update', 'PenilaianController::quickUpdate');
+    $routes->post('penilaian/bukti/(:num)', 'PenilaianController::saveBukti/$1');
     $routes->post('penilaian/complete/(:num)', 'PenilaianController::complete/$1');
     $routes->get('penilaian/(:num)/edit', 'PenilaianController::form/$1');
     $routes->get('penilaian/(:num)', 'PenilaianController::detail/$1');

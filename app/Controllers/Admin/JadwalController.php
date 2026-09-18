@@ -27,14 +27,27 @@ class JadwalController extends BaseController
 
     public function index()
     {
-        $data['jadwals'] = $this->jadwalSupervisiModel
+        $tahunAjarAktif = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first();
+        $query = $this->jadwalSupervisiModel
             ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, kelas.nama_kelas, users.username as nama_supervisor')
             ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
             ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
             ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
-            ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
-            ->findAll();
-            
+            ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left');
+
+        // Lembaran baru per tahun: index hanya tampilkan tahun aktif.
+        // Arsip tetap tersimpan; aktifkan tahun lama untuk melihatnya.
+        if ($tahunAjarAktif) {
+            $query->where('jadwal_supervisi.tahun_ajar_id', $tahunAjarAktif['id']);
+        }
+
+        $data['jadwals'] = $query->orderBy('jadwal_supervisi.tanggal_supervisi', 'ASC')->findAll();
+        $data['tahun_ajar_aktif'] = $tahunAjarAktif;
+        $data['tahun_ajars'] = $this->tahunAjarModel->orderBy('tahun_ajar', 'DESC')->orderBy('id', 'DESC')->findAll();
+        $data['arsip_count'] = $tahunAjarAktif
+            ? 0
+            : $this->jadwalSupervisiModel->countAll();
+
         return view('admin/jadwal/index', $data);
     }
 
@@ -53,17 +66,47 @@ class JadwalController extends BaseController
         
         // Get supervisors (users with role supervisor or kepala) including role info
         $supervisors = $this->userModel->select('id, username, role')->whereIn('role', ['supervisor', 'kepala'])->where('status', 'Aktif')->findAll();
+
+        $refMapelModel = new \App\Models\RefMapelModel();
+        $mapels = $refMapelModel->where('status', 'Aktif')->orderBy('nama_mapel', 'ASC')->findAll();
+
+        $kelompokModel = new \App\Models\KelompokSupervisiModel();
+        $kelompoks = $kelompokModel->orderBy('nama_kelompok', 'ASC')->findAll();
         
         $data['tahun_ajar'] = $tahunAjarAktif;
         $data['kelases'] = $kelases;
         $data['gurus'] = $this->guruModel->findAll();
         $data['supervisors'] = $supervisors;
+        $data['mapels'] = $mapels;
+        $data['kelompoks'] = $kelompoks;
         
         return view('admin/jadwal/create', $data);
     }
 
     public function store()
     {
+        $tahunAjarId = $this->request->getPost('tahun_ajar_id');
+        $guruId = $this->request->getPost('guru_id');
+        $supervisorId = $this->request->getPost('supervisor_id');
+        $kelompokId = $this->request->getPost('kelompok_id');
+        $tanggalSupervisi = $this->request->getPost('tanggal_supervisi');
+        $jamKe = $this->request->getPost('jam_ke');
+
+        // Validasi fleksibel: mendukung 1 guru disupervisi oleh supervisor/kelompok berbeda
+        // dengan proteksi bentrok waktu (collision guard) dan anti-duplikasi kelompok
+        $dupMsg = $this->findDuplicateScheduleMessage(
+            $tahunAjarId,
+            $guruId,
+            $supervisorId,
+            $kelompokId,
+            $tanggalSupervisi,
+            $jamKe,
+            null
+        );
+        if ($dupMsg !== null) {
+            return redirect()->back()->withInput()->with('error', $dupMsg);
+        }
+
         // Get class name
         $kelasModel = new \App\Models\KelasModel();
         $kelas = $kelasModel->find($this->request->getPost('kelas_id'));
@@ -78,13 +121,27 @@ class JadwalController extends BaseController
             $mp = $guru['mata_pelajaran'] ?? '';
         }
 
+        $mapelId = $this->request->getPost('mapel_id');
+        $mapelId = ($mapelId === '' || $mapelId === null) ? null : (int) $mapelId;
+        if ($mapelId !== null && !(new \App\Models\RefMapelModel())->find($mapelId)) {
+            return redirect()->back()->withInput()->with('error', 'Mata pelajaran referensi tidak ditemukan.');
+        }
+
+        $kelompokId = $this->request->getPost('kelompok_id');
+        $kelompokId = ($kelompokId === '' || $kelompokId === null) ? null : (int) $kelompokId;
+        if ($kelompokId !== null && !(new \App\Models\KelompokSupervisiModel())->find($kelompokId)) {
+            return redirect()->back()->withInput()->with('error', 'Kelompok supervisi tidak ditemukan.');
+        }
+
         $jadwalData = [
             'tahun_ajar_id' => $this->request->getPost('tahun_ajar_id'),
             'guru_id' => $this->request->getPost('guru_id'),
             'supervisor_id' => $this->request->getPost('supervisor_id'),
             'mata_pelajaran' => $mp,
+            'mapel_id' => $mapelId,
             'kelas' => $kelas ? $kelas['nama_kelas'] : '', // Store class name for backward compatibility
             'kelas_id' => $this->request->getPost('kelas_id'),
+            'kelompok_id' => $kelompokId,
             'jam_ke' => $this->request->getPost('jam_ke'),
             'hari' => $this->request->getPost('hari'),
             'tanggal_supervisi' => $this->request->getPost('tanggal_supervisi'),
@@ -107,10 +164,13 @@ class JadwalController extends BaseController
     public function show($id)
     {
         $data['jadwal'] = $this->jadwalSupervisiModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, ref_mapel.nama_mapel, kelompok_supervisi.nama_kelompok')
             ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
             ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
-            ->find($id);
+            ->join('ref_mapel', 'ref_mapel.id = jadwal_supervisi.mapel_id', 'left')
+            ->join('kelompok_supervisi', 'kelompok_supervisi.id = jadwal_supervisi.kelompok_id', 'left')
+            ->where('jadwal_supervisi.id', $id)
+            ->first();
             
         if (!$data['jadwal']) {
             return redirect()->to('/admin/jadwal')->with('error', 'Jadwal tidak ditemukan');
@@ -143,18 +203,51 @@ class JadwalController extends BaseController
         
         // Get supervisors (users with role supervisor or kepala) including role info
         $supervisors = $this->userModel->select('id, username, role')->whereIn('role', ['supervisor', 'kepala'])->where('status', 'Aktif')->findAll();
+
+        $refMapelModel = new \App\Models\RefMapelModel();
+        $mapels = $refMapelModel->where('status', 'Aktif')->orderBy('nama_mapel', 'ASC')->findAll();
+
+        $kelompokModel = new \App\Models\KelompokSupervisiModel();
+        $kelompoks = $kelompokModel->orderBy('nama_kelompok', 'ASC')->findAll();
         
         $data['tahun_ajar'] = $tahunAjarAktif;
         $data['tahun_ajars'] = $tahunAjarans; // Perubahan ini untuk memenuhi kebutuhan view
         $data['kelases'] = $kelases;
         $data['gurus'] = $this->guruModel->findAll();
         $data['supervisors'] = $supervisors;
+        $data['mapels'] = $mapels;
+        $data['kelompoks'] = $kelompoks;
         
         return view('admin/jadwal/edit', $data);
     }
 
     public function update($id)
     {
+        $existing = $this->jadwalSupervisiModel->find($id);
+        if (!$existing) {
+            return redirect()->to('/admin/jadwal')->with('error', 'Jadwal tidak ditemukan');
+        }
+
+        $tahunAjarId = $this->request->getPost('tahun_ajar_id') ?: ($existing['tahun_ajar_id'] ?? null);
+        $guruId = $this->request->getPost('guru_id') ?: ($existing['guru_id'] ?? null);
+        $supervisorId = $this->request->getPost('supervisor_id') ?: ($existing['supervisor_id'] ?? null);
+        $kelompokId = $this->request->getPost('kelompok_id') ?: ($existing['kelompok_id'] ?? null);
+        $tanggalSupervisi = $this->request->getPost('tanggal_supervisi') ?: ($existing['tanggal_supervisi'] ?? null);
+        $jamKe = $this->request->getPost('jam_ke') ?: ($existing['jam_ke'] ?? null);
+
+        $dupMsg = $this->findDuplicateScheduleMessage(
+            $tahunAjarId,
+            $guruId,
+            $supervisorId,
+            $kelompokId,
+            $tanggalSupervisi,
+            $jamKe,
+            (int) $id
+        );
+        if ($dupMsg !== null) {
+            return redirect()->back()->withInput()->with('error', $dupMsg);
+        }
+
         // Get class name
         $kelasModel = new \App\Models\KelasModel();
         $kelas = $kelasModel->find($this->request->getPost('kelas_id'));
@@ -163,12 +256,26 @@ class JadwalController extends BaseController
         $mpRaw = $this->request->getPost('mata_pelajaran');
         $mp = $mpRaw !== null ? trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $mpRaw))) : null;
 
+        $mapelId = $this->request->getPost('mapel_id');
+        $mapelId = ($mapelId === '' || $mapelId === null) ? null : (int) $mapelId;
+        if ($mapelId !== null && !(new \App\Models\RefMapelModel())->find($mapelId)) {
+            return redirect()->back()->withInput()->with('error', 'Mata pelajaran referensi tidak ditemukan.');
+        }
+
+        $kelompokId = $this->request->getPost('kelompok_id');
+        $kelompokId = ($kelompokId === '' || $kelompokId === null) ? null : (int) $kelompokId;
+        if ($kelompokId !== null && !(new \App\Models\KelompokSupervisiModel())->find($kelompokId)) {
+            return redirect()->back()->withInput()->with('error', 'Kelompok supervisi tidak ditemukan.');
+        }
+
         $jadwalData = [
             'tahun_ajar_id' => $this->request->getPost('tahun_ajar_id'),
             'guru_id' => $this->request->getPost('guru_id'),
             'supervisor_id' => $this->request->getPost('supervisor_id'),
+            'mapel_id' => $mapelId,
             'kelas' => $kelas ? $kelas['nama_kelas'] : '',
             'kelas_id' => $this->request->getPost('kelas_id'),
+            'kelompok_id' => $kelompokId,
             'jam_ke' => $this->request->getPost('jam_ke'),
             'hari' => $this->request->getPost('hari'),
             'tanggal_supervisi' => $this->request->getPost('tanggal_supervisi'),
@@ -202,18 +309,108 @@ class JadwalController extends BaseController
         // Periksa apakah jadwal sudah digunakan dalam hasil supervisi
         $hasilSupervisiModel = new \App\Models\HasilSupervisiModel();
         $jumlahHasil = $hasilSupervisiModel->where('jadwal_supervisi_id', $id)->countAllResults();
-        
+
         if ($jumlahHasil > 0) {
             return redirect()->to('/admin/jadwal')->with('error', 'Tidak dapat menghapus jadwal supervisi ini karena sudah digunakan dalam hasil supervisi');
         }
-        
+
         $result = $this->jadwalSupervisiModel->delete($id);
-        
+
         if ($result) {
             return redirect()->to('/admin/jadwal')->with('success', 'Jadwal supervisi berhasil dihapus');
-        } else {
-            return redirect()->to('/admin/jadwal')->with('error', 'Gagal menghapus jadwal supervisi');
         }
+
+        return redirect()->to('/admin/jadwal')->with('error', 'Gagal menghapus jadwal supervisi');
+    }
+
+    /**
+     * Validasi fleksibel:
+     * - Memperbolehkan guru disupervisi lebih dari 1x oleh supervisor berbeda atau dalam kelompok berbeda.
+     * - Mencegah duplikasi ganda dalam kelompok yang sama.
+     * - Mencegah bentrok waktu (collision guard) di tanggal & jam yang sama untuk guru maupun supervisor.
+     */
+    private function findDuplicateScheduleMessage(
+        $tahunAjarId,
+        $guruId,
+        $supervisorId = null,
+        $kelompokId = null,
+        $tanggalSupervisi = null,
+        $jamKe = null,
+        ?int $excludeId = null
+    ): ?string {
+        $tahunAjarId = (int) ($tahunAjarId ?? 0);
+        $guruId = (int) ($guruId ?? 0);
+        $supervisorId = (int) ($supervisorId ?? 0);
+        $kelompokId = !empty($kelompokId) ? (int) $kelompokId : null;
+
+        if ($tahunAjarId <= 0 || $guruId <= 0) {
+            return 'Tahun ajaran dan guru wajib dipilih.';
+        }
+
+        $tahun = $this->tahunAjarModel->find($tahunAjarId);
+        if (!$tahun) {
+            return 'Tahun ajaran tidak ditemukan.';
+        }
+        if (($tahun['status_aktif'] ?? 'Nonaktif') !== 'Aktif') {
+            return 'Jadwal hanya boleh dibuat pada tahun ajaran yang Aktif. Aktifkan dulu tahun ajaran ini.';
+        }
+
+        // 1. Cek duplikasi persis dalam kelompok yang sama
+        if ($kelompokId !== null && $kelompokId > 0) {
+            $sameKelompok = $this->jadwalSupervisiModel
+                ->where('kelompok_id', $kelompokId)
+                ->where('guru_id', $guruId);
+            if ($excludeId !== null && $excludeId > 0) {
+                $sameKelompok->where('id !=', $excludeId);
+            }
+            if ($sameKelompok->first()) {
+                return 'Guru ini sudah memiliki jadwal supervisi dalam kelompok supervisi ini.';
+            }
+        } elseif ($supervisorId > 0 && !empty($tanggalSupervisi)) {
+            // Jika tanpa kelompok, cegah duplikasi guru dengan supervisor yang sama di tanggal yang sama
+            $sameSupervisor = $this->jadwalSupervisiModel
+                ->where('tahun_ajar_id', $tahunAjarId)
+                ->where('guru_id', $guruId)
+                ->where('supervisor_id', $supervisorId)
+                ->where('tanggal_supervisi', $tanggalSupervisi);
+            if ($excludeId !== null && $excludeId > 0) {
+                $sameSupervisor->where('id !=', $excludeId);
+            }
+            if ($sameSupervisor->first()) {
+                return 'Guru ini sudah memiliki jadwal supervisi dengan supervisor tersebut pada tanggal yang sama.';
+            }
+        }
+
+        // 2. Proteksi bentrok waktu (Time Collision Guard):
+        // Guru tidak boleh memiliki 2 jadwal supervisi pada tanggal dan jam_ke yang sama
+        if (!empty($tanggalSupervisi) && !empty($jamKe)) {
+            $conflictGuru = $this->jadwalSupervisiModel
+                ->where('guru_id', $guruId)
+                ->where('tanggal_supervisi', $tanggalSupervisi)
+                ->where('jam_ke', $jamKe);
+            if ($excludeId !== null && $excludeId > 0) {
+                $conflictGuru->where('id !=', $excludeId);
+            }
+            if ($conflictGuru->first()) {
+                return "Jadwal bentrok: Guru ini sudah memiliki agenda supervisi lain pada tanggal {$tanggalSupervisi} pada jam ke-{$jamKe}.";
+            }
+        }
+
+        // Supervisor tidak boleh memiliki 2 jadwal supervisi dengan guru berbeda pada tanggal dan jam_ke yang sama
+        if (!empty($tanggalSupervisi) && !empty($jamKe) && $supervisorId > 0) {
+            $conflictSup = $this->jadwalSupervisiModel
+                ->where('supervisor_id', $supervisorId)
+                ->where('tanggal_supervisi', $tanggalSupervisi)
+                ->where('jam_ke', $jamKe);
+            if ($excludeId !== null && $excludeId > 0) {
+                $conflictSup->where('id !=', $excludeId);
+            }
+            if ($conflictSup->first()) {
+                return "Jadwal bentrok: Supervisor ini sudah memiliki jadwal supervisi guru lain pada tanggal {$tanggalSupervisi} pada jam ke-{$jamKe}.";
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -284,9 +481,10 @@ class JadwalController extends BaseController
                 
             $data = [
                 'jadwals'       => $jadwals,
-                'nama_kepala'   => get_pengaturan('nama_kepala', 'Sipuloh, M.Pd'),
-                'nip_kepala'    => get_pengaturan('nip_kepala', '197005272007011022'),
-                'kota_madrasah' => get_pengaturan('kecamatan', 'Gisting'),
+                // NOTE: blank SMA placeholders until set via Pengaturan Identitas Sekolah.
+                'nama_kepala'   => get_pengaturan('nama_kepala', ''),
+                'nip_kepala'    => get_pengaturan('nip_kepala', ''),
+                'kota_madrasah' => get_pengaturan('kecamatan', ''),
                 'tanggal_cetak' => date('Y-m-d')
             ];
             

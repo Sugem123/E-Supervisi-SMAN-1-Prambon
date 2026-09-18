@@ -64,7 +64,21 @@
                     <label for="pangkat_golongan">Pangkat/Golongan</label>
                     <input type="text" class="form-control" id="pangkat_golongan" name="pangkat_golongan">
                     
-                    <label for="mata_pelajaran">Mata Pelajaran</label>
+                    <label for="jenis_ptk">Jenis PTK</label>
+                    <select class="form-control" id="jenis_ptk" name="jenis_ptk">
+                        <option value="Guru">Guru</option>
+                        <option value="Tendik">Tendik</option>
+                    </select>
+
+                    <label for="mapel_id">Mata Pelajaran (Master SMA)</label>
+                    <select class="form-control" id="mapel_id" name="mapel_id">
+                        <option value="">Pilih Mapel</option>
+                        <?php foreach (($mapels ?? []) as $mapel): ?>
+                            <option value="<?= $mapel['id'] ?>"><?= esc($mapel['nama_mapel']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    
+                    <label for="mata_pelajaran">Mata Pelajaran (Teks/Legacy)</label>
                     <input type="text" class="form-control" id="mata_pelajaran" name="mata_pelajaran">
                     
                     <label for="status_kepegawaian">Status Kepegawaian</label>
@@ -72,7 +86,10 @@
                         <option value="">Pilih Status</option>
                         <option value="PNS">PNS</option>
                         <option value="PPPK">PPPK</option>
+                        <option value="GTT">GTT</option>
+                        <option value="PTT">PTT</option>
                         <option value="Honorer">Honorer</option>
+                        <option value="Kontrak">Kontrak</option>
                     </select>
                     
                     <div class="form-check" style="margin-top: 10px;">

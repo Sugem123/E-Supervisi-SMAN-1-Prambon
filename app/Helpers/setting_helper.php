@@ -20,15 +20,104 @@ if (!function_exists('get_pengaturan')) {
     }
 }
 
+if (!function_exists('get_nama_sekolah')) {
+    /**
+     * Get school name from system settings (SMA).
+     * Backward-compatible: falls back to legacy 'nama_madrasah' key.
+     *
+     * @return string
+     */
+    function get_nama_sekolah(): string
+    {
+        $nama = get_pengaturan('nama_sekolah', null);
+        if ($nama !== null && $nama !== '') {
+            return $nama;
+        }
+        return get_pengaturan('nama_madrasah', 'SMA NEGERI 1 CONTOH');
+    }
+}
+
 if (!function_exists('get_nama_madrasah')) {
     /**
-     * Get school name from system settings
+     * Legacy wrapper kept for backward compatibility.
      *
      * @return string
      */
     function get_nama_madrasah(): string
     {
-        return get_pengaturan('nama_madrasah', 'MIN 2 TANGGAMUS');
+        return get_nama_sekolah();
+    }
+}
+
+if (!function_exists('get_logo_url')) {
+    /**
+     * URL logo publik dengan fallback placeholder premium.
+     * Bisa diatur via Admin > Pengaturan > Identitas Sekolah.
+     *
+     * @param string $key logo|sidebar_logo|kop_logo_kiri
+     */
+    function get_logo_url(string $key = 'logo', ?string $fallback = null): string
+    {
+        $fallback = $fallback ?? 'assets/img/logo-placeholder.svg';
+        $filename = get_pengaturan($key, '');
+        if (is_string($filename) && $filename !== '') {
+            $candidates = [
+                FCPATH . 'uploads/' . $filename,
+                ROOTPATH . 'public/uploads/' . $filename,
+            ];
+            foreach ($candidates as $path) {
+                if ($path !== '' && is_file($path)) {
+                    return base_url('uploads/' . $filename);
+                }
+            }
+        }
+
+        return base_url($fallback);
+    }
+}
+
+if (!function_exists('has_custom_logo')) {
+    function has_custom_logo(string $key = 'logo'): bool
+    {
+        $filename = get_pengaturan($key, '');
+        if (!is_string($filename) || $filename === '') {
+            return false;
+        }
+        return is_file(FCPATH . 'uploads/' . $filename) || is_file(ROOTPATH . 'public/uploads/' . $filename);
+    }
+}
+
+if (!function_exists('get_identitas_publik')) {
+    /**
+     * Identitas publik untuk landing/login dengan placeholder elegan.
+     * Semua nilai bisa diatur via Admin > Pengaturan > Identitas Sekolah.
+     */
+    function get_identitas_publik(): array
+    {
+        $nama = get_nama_sekolah();
+        $alamat = get_pengaturan('alamat', '');
+        $kecamatan = get_pengaturan('kecamatan', '');
+        $kabupaten = get_pengaturan('kabupaten', '');
+        $provinsi = get_pengaturan('provinsi', '');
+        $alamatLengkap = trim(implode(', ', array_filter([$alamat, $kecamatan, $kabupaten, $provinsi])));
+        $telepon = get_pengaturan('telepon', '');
+        $email = get_pengaturan('email', '');
+        $kontak = trim(implode(' · ', array_filter([$telepon, $email])));
+
+        return [
+            'nama_sekolah'     => $nama !== '' ? $nama : 'Nama Sekolah Belum Diatur',
+            'nama_sekolah_raw' => $nama,
+            'npsn'             => get_pengaturan('npsn', '') !== '' ? get_pengaturan('npsn', '') : 'NPSN belum diatur',
+            'alamat'           => $alamatLengkap !== '' ? $alamatLengkap : 'Alamat sekolah belum diatur via Pengaturan',
+            'telepon'          => $telepon !== '' ? $telepon : '',
+            'email'            => $email !== '' ? $email : '',
+            'kontak'           => $kontak !== '' ? $kontak : 'Kontak belum diatur',
+            'nama_kepala'      => get_pengaturan('nama_kepala', '') !== '' ? get_pengaturan('nama_kepala', '') : 'Kepala Sekolah belum diatur',
+            'logo_url'         => get_logo_url('logo'),
+            'sidebar_logo_url' => get_logo_url('sidebar_logo'),
+            'has_logo'         => has_custom_logo('logo'),
+            'has_sidebar_logo' => has_custom_logo('sidebar_logo'),
+        ];
     }
 }
 
@@ -92,23 +181,23 @@ if (!function_exists('get_kop_data')) {
      */
     function get_kop_data(): array
     {
-        $namaMadrasah = get_nama_madrasah();
-        $alamat = get_pengaturan('alamat', 'Jl. Lapangan Ampera Purwodadi No. 109');
-        $kecamatan = get_pengaturan('kecamatan', 'Gisting');
-        $kabupaten = get_pengaturan('kabupaten', 'Kabupaten Tanggamus');
-        $provinsi = get_pengaturan('provinsi', 'Lampung');
-        $email = get_pengaturan('email', 'min2tanggamus@kemenag.go.id');
+        $namaMadrasah = get_nama_sekolah();
+        $alamat = get_pengaturan('alamat', 'Jl. Pendidikan No. 1');
+        $kecamatan = get_pengaturan('kecamatan', 'Kecamatan Contoh');
+        $kabupaten = get_pengaturan('kabupaten', 'Kabupaten Contoh');
+        $provinsi = get_pengaturan('provinsi', 'Provinsi Contoh');
+        $email = get_pengaturan('email', 'info@sman1contoh.sch.id');
         $telepon = get_pengaturan('telepon', '');
 
         $defaultAlamat = trim("{$alamat} Kec. {$kecamatan} {$kabupaten} - {$provinsi}", ' -');
         $defaultKontak = trim(($telepon ? "Telp: {$telepon} " : '') . ($email ? "Email: {$email}" : ''));
 
         return [
-            'baris_1' => get_pengaturan('kop_baris_1', 'KEMENTERIAN AGAMA REPUBLIK INDONESIA'),
-            'baris_2' => get_pengaturan('kop_baris_2', 'KANTOR KEMENTERIAN AGAMA KABUPATEN TANGGAMUS'),
+            'baris_1' => get_pengaturan('kop_baris_1', 'PEMERINTAH PROVINSI CONTOH'),
+            'baris_2' => get_pengaturan('kop_baris_2', 'DINAS PENDIDIKAN'),
             'baris_3' => get_pengaturan('kop_baris_3', strtoupper($namaMadrasah)),
             'baris_4' => get_pengaturan('kop_baris_4', $defaultAlamat),
-            'baris_5' => get_pengaturan('kop_baris_5', $defaultKontak ?: 'Website: https://min2tanggamus.sch.id'),
+            'baris_5' => get_pengaturan('kop_baris_5', $defaultKontak ?: 'Website: https://sman1contoh.sch.id'),
             'logo_kiri' => get_pengaturan('kop_logo_kiri', get_pengaturan('logo', '')),
             'logo_kanan' => get_pengaturan('kop_logo_kanan', ''),
             'tampilkan_logo' => get_pengaturan('kop_tampilkan_logo', '1'),

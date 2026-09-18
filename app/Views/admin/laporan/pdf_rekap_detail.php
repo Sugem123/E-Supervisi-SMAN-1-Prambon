@@ -433,7 +433,7 @@
         </tfoot>
     </table>
 
-    <!-- Blok Tanda Tangan Resmi (2 Kolom: Supervisor Pembina & Kepala Madrasah) -->
+    <!-- Blok Tanda Tangan Resmi (2 Kolom: Supervisor Pembina & Kepala Sekolah) -->
     <table class="signature-table">
         <tr>
             <!-- Kolom Kiri: Supervisor Pembina -->
@@ -445,10 +445,10 @@
                 <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipSupervisor) ?></div>
             </td>
 
-            <!-- Kolom Kanan: Kepala Madrasah -->
+            <!-- Kolom Kanan: Kepala Sekolah -->
             <td>
-                <?= esc($kotaMadrasah) ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia($tanggalCetak, false) : date('d F Y') ?><br>
-                <strong>Kepala Madrasah</strong>
+                <?= esc(!empty($kotaMadrasah) ? $kotaMadrasah : '....................') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia($tanggalCetak, false) : date('d F Y') ?><br>
+                <strong>Kepala Sekolah</strong>
                 <div class="signature-space"></div>
                 <div class="signature-name"><?= esc($namaKepala) ?></div>
                 <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipKepala) ?></div>

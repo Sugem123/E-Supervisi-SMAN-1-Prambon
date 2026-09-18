@@ -52,21 +52,29 @@ class PenilaianController extends BaseController
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Jadwal supervisi ID ' . $jadwalId . ' tidak ditemukan');
         }
 
-        // Ambil semua jenis penilaian
-        $jenisPenilaian = $this->jenisModel->findAllWithMappedColumns();
+        // Ambil jenis penilaian yang ditugaskan khusus untuk kelompok supervisi ini (jika ada)
+        $kelompokModel = new \App\Models\KelompokSupervisiModel();
+        $kelompok = $kelompokModel->resolveKelompokForSchedule($schedule);
+        $assignedJenis = $kelompok ? $kelompokModel->getAssignedJenisPenilaian((int)$kelompok['id']) : [];
 
-        // Ambil semua aspek penilaian terurut
-        $aspekPenilaian = $this->aspekModel
-            ->select('aspek_penilaian.*, jenis_penilaian.nama as nama_jenis')
-            ->join('jenis_penilaian', 'jenis_penilaian.id = aspek_penilaian.jenis_penilaian_id')
-            ->orderBy('aspek_penilaian.jenis_penilaian_id', 'ASC')
-            ->orderBy('aspek_penilaian.urutan', 'ASC')
-            ->findAll();
+        if (!empty($assignedJenis)) {
+            $assignedIds = array_map('intval', array_column($assignedJenis, 'id'));
+            $allActive = $this->jenisModel->findAllActiveWithMappedColumns();
+            $jenisPenilaian = array_values(array_filter($allActive, static fn ($j) => in_array((int)$j['id'], $assignedIds, true)));
+        } else {
+            $jenisPenilaian = $this->jenisModel->findAllActiveWithMappedColumns();
+        }
+
+        // Hanya aspek Aktif milik jenis Aktif yang ditugaskan
+        $allowedJenisIds = array_map('intval', array_column($jenisPenilaian, 'id'));
+        $aspekPenilaian = $this->aspekModel->findAllActiveWithJenis();
 
         // Kelompokkan aspek per jenis penilaian
         $aspekByJenis = [];
         foreach ($aspekPenilaian as $aspek) {
-            $aspekByJenis[$aspek['jenis_penilaian_id']][] = $aspek;
+            if (in_array((int)$aspek['jenis_penilaian_id'], $allowedJenisIds, true)) {
+                $aspekByJenis[$aspek['jenis_penilaian_id']][] = $aspek;
+            }
         }
 
         // Ambil hasil & detail yang sudah tersimpan
@@ -92,6 +100,12 @@ class PenilaianController extends BaseController
         $fotoModel = new \App\Models\FotoBuktiModel();
         $existingPhotos = $fotoModel->where('jadwal_supervisi_id', $jadwalId)->findAll();
 
+        $buktiTambahan = $this->hasilModel
+            ->where('jadwal_supervisi_id', $jadwalId)
+            ->where('(link_video IS NOT NULL AND link_video != \'\') OR (rtl IS NOT NULL AND rtl != \'\') OR (berita_acara_path IS NOT NULL AND berita_acara_path != \'\')', null, false)
+            ->orderBy('id', 'ASC')
+            ->first();
+
         $data = [
             'title'           => 'Edit Hasil Penilaian Supervisi',
             'schedule'        => $schedule,
@@ -100,6 +114,7 @@ class PenilaianController extends BaseController
             'existingResults' => $existingResults,
             'existingDetails' => $existingDetails,
             'existingPhotos'  => $existingPhotos,
+            'buktiTambahan'   => $buktiTambahan,
             'activeTab'       => $activeTab,
         ];
 
@@ -132,6 +147,15 @@ class PenilaianController extends BaseController
                 ]);
             }
 
+            // Tolak penilaian baru untuk jenis yang dinonaktifkan
+            if (!$this->jenisModel->isActive((int) $jenisPenilaianId)) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Jenis penilaian ini sedang Nonaktif dan tidak dapat dinilai.',
+                    'token'   => csrf_hash()
+                ]);
+            }
+
             // Cek apakah hasil untuk jenis penilaian ini sudah ada
             $existingHasil = $this->hasilModel
                 ->where('jadwal_supervisi_id', $jadwalId)
@@ -159,10 +183,8 @@ class PenilaianController extends BaseController
                 ]);
             }
 
-            // Siapkan detail penilaian
-            $aspekList = $this->aspekModel
-                ->where('jenis_penilaian_id', $jenisPenilaianId)
-                ->findAll();
+            // Siapkan detail penilaian (hanya aspek Aktif; BC bila kolom belum ada)
+            $aspekList = $this->filterActiveAspek($jenisPenilaianId);
 
             $detailsToInsert = [];
             $totalSkor = 0;
@@ -250,6 +272,15 @@ class PenilaianController extends BaseController
             $aspekId = $this->request->getPost('aspek_id');
             $skor = (int)$this->request->getPost('skor');
             $catatan = $this->request->getPost('catatan');
+
+            // Tolak skor untuk aspek yang dinonaktifkan
+            if (!$this->aspekModel->isActive((int) $aspekId)) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Aspek penilaian ini sedang Nonaktif.',
+                    'token'   => csrf_hash()
+                ]);
+            }
 
             $schedule = $this->jadwalModel
                 ->select('jadwal_supervisi.*, guru.nama as nama_guru')
@@ -361,6 +392,147 @@ class PenilaianController extends BaseController
         }
     }
 
+    public function saveBukti($jadwalId)
+    {
+        if (!$this->request->isAJAX()) {
+            return redirect()->back();
+        }
+
+        try {
+            $schedule = $this->jadwalModel
+                ->select('jadwal_supervisi.*, guru.nama as nama_guru')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+                ->where('jadwal_supervisi.id', $jadwalId)
+                ->first();
+
+            if (!$schedule) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Jadwal tidak ditemukan',
+                    'token'   => csrf_hash()
+                ]);
+            }
+
+            $linkVideo = trim((string) $this->request->getPost('link_video'));
+            $rtl = trim((string) $this->request->getPost('rtl'));
+            if ($linkVideo !== '' && filter_var($linkVideo, FILTER_VALIDATE_URL) === false) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Link video tidak valid. Gunakan URL lengkap diawali http:// atau https://.',
+                    'token'   => csrf_hash()
+                ]);
+            }
+
+            $beritaAcaraPath = null;
+            $file = $this->request->getFile('berita_acara');
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                $allowedBa = ['application/pdf', 'image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
+                if (!in_array($file->getMimeType(), $allowedBa, true)) {
+                    return $this->response->setJSON([
+                        'status'  => 'error',
+                        'message' => 'Berita acara harus PDF atau gambar (JPG, PNG, WEBP).',
+                        'token'   => csrf_hash()
+                    ]);
+                }
+                if ($file->getSize() > 5 * 1024 * 1024) {
+                    return $this->response->setJSON([
+                        'status'  => 'error',
+                        'message' => 'Berita acara maksimal 5MB.',
+                        'token'   => csrf_hash()
+                    ]);
+                }
+                $uploadPath = ROOTPATH . 'public/uploads/berita_acara/jadwal_' . $jadwalId;
+                if (!is_dir($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+                $newName = $file->getRandomName();
+                if (!$file->move($uploadPath, $newName)) {
+                    return $this->response->setJSON([
+                        'status'  => 'error',
+                        'message' => 'Gagal menyimpan berkas berita acara.',
+                        'token'   => csrf_hash()
+                    ]);
+                }
+                $beritaAcaraPath = 'uploads/berita_acara/jadwal_' . $jadwalId . '/' . $newName;
+            }
+
+            $hasil = $this->hasilModel
+                ->where('jadwal_supervisi_id', $jadwalId)
+                ->orderBy('id', 'ASC')
+                ->first();
+
+            if (!$hasil) {
+                $jenis = $this->jenisModel->orderBy('id', 'ASC')->first();
+                if (!$jenis) {
+                    return $this->response->setJSON([
+                        'status'  => 'error',
+                        'message' => 'Jenis penilaian belum tersedia.',
+                        'token'   => csrf_hash()
+                    ]);
+                }
+                $hasilId = $this->hasilModel->insert([
+                    'jadwal_supervisi_id' => $jadwalId,
+                    'jenis_penilaian_id'  => $jenis['id'],
+                    'rekomendasi'         => '',
+                    'link_video'          => ($linkVideo !== '' ? $linkVideo : null),
+                    'rtl'                 => ($rtl !== '' ? $rtl : null),
+                    'berita_acara_path'   => $beritaAcaraPath,
+                ]);
+                $hasil = $this->hasilModel->find($hasilId);
+            } else {
+                $updateData = [
+                    'link_video' => ($linkVideo !== '' ? $linkVideo : null),
+                    'rtl'        => ($rtl !== '' ? $rtl : null),
+                ];
+                if ($beritaAcaraPath !== null) {
+                    if (!empty($hasil['berita_acara_path'])) {
+                        $oldFile = ROOTPATH . 'public/' . $hasil['berita_acara_path'];
+                        if (is_file($oldFile)) {
+                            @unlink($oldFile);
+                        }
+                    }
+                    $updateData['berita_acara_path'] = $beritaAcaraPath;
+                }
+                $this->hasilModel->update($hasil['id'], $updateData);
+                $hasil = $this->hasilModel->find($hasil['id']);
+            }
+
+            if (!$hasil) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Gagal menyimpan bukti tambahan.',
+                    'token'   => csrf_hash()
+                ]);
+            }
+
+            $userId = session()->get('id');
+            $guruNama = $schedule['nama_guru'] ?? ('ID ' . $schedule['guru_id']);
+            $this->auditLogModel->logActivity(
+                $userId,
+                'update_bukti_penilaian',
+                "Admin memperbarui bukti tambahan (video/RTL/berita acara) untuk guru {$guruNama} (Jadwal #{$jadwalId})"
+            );
+
+            return $this->response->setJSON([
+                'status'  => 'success',
+                'message' => 'Bukti tambahan berhasil disimpan.',
+                'data'    => [
+                    'link_video'        => $hasil['link_video'] ?? null,
+                    'rtl'               => $hasil['rtl'] ?? null,
+                    'berita_acara_path' => $hasil['berita_acara_path'] ?? null,
+                ],
+                'token'   => csrf_hash()
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Error saveBukti admin penilaian: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+                'token'   => csrf_hash()
+            ]);
+        }
+    }
+
     public function complete($jadwalId)
     {
         try {
@@ -379,7 +551,15 @@ class PenilaianController extends BaseController
             }
 
             $db = \Config\Database::connect();
-            $hasilData = $this->hasilModel->where('jadwal_supervisi_id', $jadwalId)->findAll();
+            $kelompokModel = new \App\Models\KelompokSupervisiModel();
+            $kelompok = $kelompokModel->resolveKelompokForSchedule($schedule);
+            $assignedIds = $kelompok ? $kelompokModel->getAssignedJenisIds((int)$kelompok['id']) : [];
+
+            $hasilQuery = $this->hasilModel->where('jadwal_supervisi_id', $jadwalId);
+            if (!empty($assignedIds)) {
+                $hasilQuery->whereIn('jenis_penilaian_id', $assignedIds);
+            }
+            $hasilData = $hasilQuery->findAll();
 
             $grandTotalSkor = 0;
             $grandTotalMaks = 0;
@@ -414,12 +594,8 @@ class PenilaianController extends BaseController
                 $ketercapaian = 'Kurang';
             }
 
-            // Pertahankan/pastikan status tetap 'Selesai'
-            $this->jadwalModel->update($jadwalId, [
-                'status'       => 'Selesai',
-                'nilai_akhir'  => $nilaiAkhir,
-                'ketercapaian' => $ketercapaian
-            ]);
+            // Tandai jadwal selesai; agregat nilai tetap dihitung dari detail per komponen
+            $this->jadwalModel->update($jadwalId, ['status' => 'Selesai']);
 
             // Audit log
             $userId = session()->get('id');
@@ -444,6 +620,20 @@ class PenilaianController extends BaseController
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
                 'token'   => csrf_hash()
             ]);
+        }
+    }
+
+    private function filterActiveAspek($jenisPenilaianId): array
+    {
+        try {
+            $builder = $this->aspekModel->where('jenis_penilaian_id', $jenisPenilaianId);
+            $fields = \Config\Database::connect()->getFieldNames('aspek_penilaian');
+            if (in_array('status', $fields, true)) {
+                $builder->where('status', 'Aktif');
+            }
+            return $builder->findAll();
+        } catch (\Throwable $e) {
+            return $this->aspekModel->where('jenis_penilaian_id', $jenisPenilaianId)->findAll();
         }
     }
 

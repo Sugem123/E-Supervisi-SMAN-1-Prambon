@@ -65,8 +65,11 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-6">
-                        <label for="mata_pelajaran">Mata Pelajaran</label>
-                        <input type="text" class="form-control" id="mata_pelajaran" name="mata_pelajaran" value="<?= old('mata_pelajaran'); ?>">
+                        <label for="jenis_ptk">Jenis PTK</label>
+                        <select class="form-control" id="jenis_ptk" name="jenis_ptk">
+                            <option value="Guru" <?= old('jenis_ptk', 'Guru') == 'Guru' ? 'selected' : ''; ?>>Guru</option>
+                            <option value="Tendik" <?= old('jenis_ptk') == 'Tendik' ? 'selected' : ''; ?>>Tendik</option>
+                        </select>
                     </div>
                     <div class="form-group col-md-6">
                         <label for="status_kepegawaian">Status Kepegawaian</label>
@@ -74,8 +77,29 @@
                             <option value="">Pilih Status</option>
                             <option value="PNS" <?= old('status_kepegawaian') == 'PNS' ? 'selected' : ''; ?>>PNS</option>
                             <option value="PPPK" <?= old('status_kepegawaian') == 'PPPK' ? 'selected' : ''; ?>>PPPK</option>
+                            <option value="GTT" <?= old('status_kepegawaian') == 'GTT' ? 'selected' : ''; ?>>GTT</option>
+                            <option value="PTT" <?= old('status_kepegawaian') == 'PTT' ? 'selected' : ''; ?>>PTT</option>
                             <option value="Honorer" <?= old('status_kepegawaian') == 'Honorer' ? 'selected' : ''; ?>>Honorer</option>
+                            <option value="Kontrak" <?= old('status_kepegawaian') == 'Kontrak' ? 'selected' : ''; ?>>Kontrak</option>
                         </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="mapel_id">Mata Pelajaran (Master SMA)</label>
+                        <select class="form-control" id="mapel_id" name="mapel_id">
+                            <option value="">Pilih Mapel</option>
+                            <?php foreach (($mapels ?? []) as $mapel): ?>
+                                <option value="<?= $mapel['id']; ?>" <?= (string) old('mapel_id') === (string) $mapel['id'] ? 'selected' : ''; ?>>
+                                    <?= esc($mapel['nama_mapel']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Kosongkan bila data master mapel belum tersedia.</small>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="mata_pelajaran">Mata Pelajaran (Teks/Legacy)</label>
+                        <input type="text" class="form-control" id="mata_pelajaran" name="mata_pelajaran" value="<?= old('mata_pelajaran'); ?>">
                     </div>
                 </div>
                 <div class="form-group">

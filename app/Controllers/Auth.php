@@ -15,44 +15,61 @@ class Auth extends BaseController
             return redirect()->route('dashboard');
         }
 
-        return view('auth/login');
+        helper('setting');
+
+        return view('auth/login', [
+            'namaSekolah' => \get_nama_sekolah(),
+            'identitas'   => \get_identitas_publik(),
+        ]);
     }
 
     public function attemptLogin()
     {
         $validation = \Config\Services::validation();
-        
+
+        // Admin boleh masuk pakai username tanpa format email.
+        // Semua role boleh pakai username ATAU email pada satu kolom `login`.
+        // `email` tetap diterima sebagai alias lama agar form/bookmark lama tidak rusak.
         $rules = [
-            'email' => 'required|valid_email',
+            'login' => 'permit_empty|min_length[3]',
+            'email' => 'permit_empty|min_length[3]',
             'password' => 'required|min_length[8]'
         ];
-        
+
         $errors = [
-            'email' => [
-                'required' => 'Email is required',
-                'valid_email' => 'Please enter a valid email address'
-            ],
             'password' => [
-                'required' => 'Password is required',
-                'min_length' => 'Password must be at least 8 characters long'
+                'required' => 'Kata sandi wajib diisi',
+                'min_length' => 'Kata sandi minimal 8 karakter'
             ]
         ];
-        
+
         if (!$this->validate($rules, $errors)) {
+            helper('setting');
             return view('auth/login', [
-                'validation' => $this->validator
+                'validation' => $this->validator,
+                'namaSekolah' => \get_nama_sekolah(),
+                'identitas'   => \get_identitas_publik(),
             ]);
         }
-        
-        $email = $this->request->getPost('email');
-        $password = $this->request->getPost('password');
-        
+
+        $login = trim((string) ($this->request->getPost('login') ?? $this->request->getPost('email') ?? ''));
+        $password = (string) $this->request->getPost('password');
+
+        if ($login === '') {
+            session()->setFlashdata('error', 'Username atau email wajib diisi');
+            return redirect()->route('login')->withInput();
+        }
+
         // Get user model
         $userModel = new \App\Models\UserModel();
-        $user = $userModel->where('email', $email)->first();
+        $user = $userModel->groupStart()
+            ->where('username', $login)
+            ->orWhere('email', $login)
+            ->groupEnd()
+            ->first();
         
         // Check if user exists and password is correct
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && isset($user['password']) && password_verify($password, $user['password'])) {
             // Get system settings
             $settingModel = new SystemSettingModel();
             $settings = $settingModel->getAllSettings();
@@ -68,8 +85,10 @@ class Auth extends BaseController
             ];
             
             // Add specific system settings to session (whitelist)
+            // NOTE: 'nama_sekolah' (new) + 'nama_madrasah' (legacy fallback) both whitelisted.
             $allowedSettings = [
-                'nama_madrasah', 'alamat', 'telepon', 'email', 
+                'nama_sekolah', 'nama_madrasah', 'npsn', 'alamat', 'kecamatan', 'kabupaten', 'provinsi',
+                'telepon', 'email', 
                 'logo', 'kop_surat', 'sidebar_logo', 
                 'nama_kepala', 'nip_kepala'
             ];
@@ -99,8 +118,8 @@ class Auth extends BaseController
                     return redirect()->route('dashboard');
             }
         } else {
-            session()->setFlashdata('error', 'Invalid email or password');
-            return redirect()->route('login');
+            session()->setFlashdata('error', 'Username/email atau kata sandi salah');
+            return redirect()->route('login')->withInput();
         }
     }
     

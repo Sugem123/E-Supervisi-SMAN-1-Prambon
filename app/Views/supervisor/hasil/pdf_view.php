@@ -666,7 +666,7 @@
 
                 <!-- Kolom Tengah: Kepala Sekolah -->
                 <td style="padding-top: 40px;" class="signature-block">
-                    <p>Mengetahui,<br>Kepala Madrasah</p>
+                    <p>Mengetahui,<br>Kepala Sekolah</p>
                     <div class="signature-space"></div>
                     <p style="margin: 2px 0; font-weight: bold; text-decoration: underline;">
                         <?= esc($schedule['nama_kepala'] ?? '...........................') ?>

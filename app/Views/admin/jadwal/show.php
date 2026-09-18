@@ -31,7 +31,12 @@
                         <tr>
                             <td><strong>Mata Pelajaran</strong></td>
                             <td>:</td>
-                            <td><?= $jadwal['mata_pelajaran'] ?></td>
+                            <td><?= $jadwal['mata_pelajaran'] ?><?= !empty($jadwal['nama_mapel']) ? ' (' . esc($jadwal['nama_mapel']) . ')' : '' ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Kelompok Supervisi</strong></td>
+                            <td>:</td>
+                            <td><?= !empty($jadwal['nama_kelompok']) ? esc($jadwal['nama_kelompok']) : '-' ?></td>
                         </tr>
                         <tr>
                             <td><strong>Kelas</strong></td>
