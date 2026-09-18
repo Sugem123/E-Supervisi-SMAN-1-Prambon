@@ -1112,7 +1112,7 @@ $logo    = $ident['logo_url'] ?? base_url('assets/img/logo-placeholder.svg');
     </div>
 
     <div class="lux-footer-strip">
-        <span>&copy; <?= date('Y') ?> <strong><?= esc($nama) ?></strong> &bull; Supervisi Guru</span>
+        <span>Copyright &copy; TIM IT <?= esc($nama) ?> <?= date('Y') ?></span>
         <span>Integritas &bull; Kolaborasi &bull; Profesional &bull; Berkelanjutan</span>
     </div>
 </footer>
