@@ -270,3 +270,85 @@ if (!function_exists('render_kop_surat')) {
         return $html;
     }
 }
+
+if (!function_exists('get_default_jam_pelajaran')) {
+    /**
+     * Jadwal Jam Pelajaran Default Standar SMA (durasi 45 menit/JP, 10 Jam Pelajaran + 2 Istirahat).
+     */
+    function get_default_jam_pelajaran(): array
+    {
+        return [
+            ['jam_ke' => '1', 'waktu_dari' => '07:00', 'waktu_sampai' => '07:45', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-1 (KBM)'],
+            ['jam_ke' => '2', 'waktu_dari' => '07:45', 'waktu_sampai' => '08:30', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-2 (KBM)'],
+            ['jam_ke' => '3', 'waktu_dari' => '08:30', 'waktu_sampai' => '09:15', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-3 (KBM)'],
+            ['jam_ke' => '4', 'waktu_dari' => '09:15', 'waktu_sampai' => '10:00', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-4 (KBM)'],
+            ['jam_ke' => '-', 'waktu_dari' => '10:00', 'waktu_sampai' => '10:30', 'is_istirahat' => 1, 'keterangan' => 'Istirahat I'],
+            ['jam_ke' => '5', 'waktu_dari' => '10:30', 'waktu_sampai' => '11:15', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-5 (KBM)'],
+            ['jam_ke' => '6', 'waktu_dari' => '11:15', 'waktu_sampai' => '12:00', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-6 (KBM)'],
+            ['jam_ke' => '-', 'waktu_dari' => '12:00', 'waktu_sampai' => '12:45', 'is_istirahat' => 1, 'keterangan' => 'Istirahat II / Sholat Dhuhur'],
+            ['jam_ke' => '7', 'waktu_dari' => '12:45', 'waktu_sampai' => '13:30', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-7 (KBM)'],
+            ['jam_ke' => '8', 'waktu_dari' => '13:30', 'waktu_sampai' => '14:15', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-8 (KBM)'],
+            ['jam_ke' => '9', 'waktu_dari' => '14:15', 'waktu_sampai' => '15:00', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-9 (KBM)'],
+            ['jam_ke' => '10', 'waktu_dari' => '15:00', 'waktu_sampai' => '15:45', 'is_istirahat' => 0, 'keterangan' => 'Jam Ke-10 (KBM)'],
+        ];
+    }
+}
+
+if (!function_exists('get_jam_pelajaran')) {
+    /**
+     * Mengambil daftar konfigurasi jam pelajaran (termasuk istirahat) dari Pengaturan Sistem.
+     */
+    function get_jam_pelajaran(): array
+    {
+        $raw = get_pengaturan('jam_pelajaran', null);
+        if ($raw) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return $decoded;
+            }
+        }
+        return get_default_jam_pelajaran();
+    }
+}
+
+if (!function_exists('get_jam_pelajaran_kbm')) {
+    /**
+     * Mengambil slot jam pelajaran KBM aktif (tanpa istirahat) untuk alokasi jadwal supervisi.
+     */
+    function get_jam_pelajaran_kbm(): array
+    {
+        $all = get_jam_pelajaran();
+        $kbm = [];
+        foreach ($all as $item) {
+            if (empty($item['is_istirahat']) && !empty($item['jam_ke']) && $item['jam_ke'] !== '-') {
+                $jk = (string)$item['jam_ke'];
+                $dari = substr($item['waktu_dari'] ?? '07:00', 0, 5);
+                $sampai = substr($item['waktu_sampai'] ?? '07:45', 0, 5);
+                $kbm[$jk] = [
+                    'jam_ke'       => $jk,
+                    'waktu_dari'   => $dari,
+                    'waktu_sampai' => $sampai,
+                    'keterangan'   => $item['keterangan'] ?? "Jam Ke-{$jk}",
+                    'label'        => "Jam Ke-{$jk} ({$dari} - {$sampai})"
+                ];
+            }
+        }
+        if (empty($kbm)) {
+            foreach (get_default_jam_pelajaran() as $item) {
+                if (empty($item['is_istirahat']) && !empty($item['jam_ke']) && $item['jam_ke'] !== '-') {
+                    $jk = (string)$item['jam_ke'];
+                    $dari = substr($item['waktu_dari'], 0, 5);
+                    $sampai = substr($item['waktu_sampai'], 0, 5);
+                    $kbm[$jk] = [
+                        'jam_ke'       => $jk,
+                        'waktu_dari'   => $dari,
+                        'waktu_sampai' => $sampai,
+                        'keterangan'   => $item['keterangan'] ?? "Jam Ke-{$jk}",
+                        'label'        => "Jam Ke-{$jk} ({$dari} - {$sampai})"
+                    ];
+                }
+            }
+        }
+        return $kbm;
+    }
+}

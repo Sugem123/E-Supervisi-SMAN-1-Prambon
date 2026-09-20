@@ -176,19 +176,15 @@ class GenerateJadwalController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Tidak ada hari kerja (Senin–Sabtu) dalam rentang tanggal yang dipilih.');
         }
 
-        // Konfigurasi jam dan slot waktu pelajaran (Jam ke-5 adalah jam istirahat 09:50-10:10, tidak digunakan)
-        $slotWaktu = [
-            1 => ['jam_ke' => '1', 'waktu_dari' => '07:30', 'waktu_sampai' => '08:05'],
-            2 => ['jam_ke' => '2', 'waktu_dari' => '08:05', 'waktu_sampai' => '08:40'],
-            3 => ['jam_ke' => '3', 'waktu_dari' => '08:40', 'waktu_sampai' => '09:15'],
-            4 => ['jam_ke' => '4', 'waktu_dari' => '09:15', 'waktu_sampai' => '09:50'],
-            6 => ['jam_ke' => '6', 'waktu_dari' => '10:10', 'waktu_sampai' => '10:45'],
-            7 => ['jam_ke' => '7', 'waktu_dari' => '10:45', 'waktu_sampai' => '11:20'],
-        ];
+        // Konfigurasi jam dan slot waktu pelajaran (diambil dinamis dari Pengaturan Jam Pelajaran)
+        $slotWaktu = get_jam_pelajaran_kbm();
+        $availableSlots = array_keys($slotWaktu);
+        if (empty($availableSlots)) {
+            $availableSlots = ['1'];
+            $slotWaktu = ['1' => ['jam_ke' => '1', 'waktu_dari' => '07:00', 'waktu_sampai' => '07:45']];
+        }
 
-        // Daftar jam yang tersedia secara berurutan (tanpa jam ke-5)
-        $availableSlots = [1, 2, 3, 4, 6, 7];
-        $startSlotIdx = array_search((int)$sesiMulai, $availableSlots);
+        $startSlotIdx = array_search((string)$sesiMulai, $availableSlots, true);
         if ($startSlotIdx === false) {
             $startSlotIdx = 0;
         }
@@ -370,17 +366,10 @@ class GenerateJadwalController extends BaseController
 
             $jamKe = $overrideJam[$idx] ?? $item['jam_ke'];
 
-            // Konfigurasi waktu berdasarkan jam pelajaran
-            $slotWaktuSync = [
-                1 => ['waktu_dari' => '07:30', 'waktu_sampai' => '08:05'],
-                2 => ['waktu_dari' => '08:05', 'waktu_sampai' => '08:40'],
-                3 => ['waktu_dari' => '08:40', 'waktu_sampai' => '09:15'],
-                4 => ['waktu_dari' => '09:15', 'waktu_sampai' => '09:50'],
-                6 => ['waktu_dari' => '10:10', 'waktu_sampai' => '10:45'],
-                7 => ['waktu_dari' => '10:45', 'waktu_sampai' => '11:20'],
-            ];
-            $waktuDari = isset($slotWaktuSync[(int)$jamKe]) ? $slotWaktuSync[(int)$jamKe]['waktu_dari'] : $item['waktu_dari'];
-            $waktuSampai = isset($slotWaktuSync[(int)$jamKe]) ? $slotWaktuSync[(int)$jamKe]['waktu_sampai'] : $item['waktu_sampai'];
+            // Konfigurasi waktu berdasarkan jam pelajaran (diambil dinamis dari Pengaturan Jam Pelajaran)
+            $slotWaktuSync = get_jam_pelajaran_kbm();
+            $waktuDari = isset($slotWaktuSync[(string)$jamKe]) ? $slotWaktuSync[(string)$jamKe]['waktu_dari'] : $item['waktu_dari'];
+            $waktuSampai = isset($slotWaktuSync[(string)$jamKe]) ? $slotWaktuSync[(string)$jamKe]['waktu_sampai'] : $item['waktu_sampai'];
 
             // Tentukan tanggal dan nama hari (mendukung penyesuaian/override tanggal)
             $tanggalSupervisi = !empty($overrideTanggal[$idx]) ? $overrideTanggal[$idx] : $item['tanggal_supervisi'];

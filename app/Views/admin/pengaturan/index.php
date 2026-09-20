@@ -63,6 +63,11 @@
                 <i class="fas fa-calendar-alt mr-1"></i> Tahun Ajaran & Semester
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= ($currentTab === 'jam-pelajaran') ? 'active' : '' ?>" id="jam-pelajaran-tab" data-toggle="tab" href="#jam-pelajaran-pane" role="tab" aria-controls="jam-pelajaran-pane" aria-selected="<?= ($currentTab === 'jam-pelajaran') ? 'true' : 'false' ?>">
+                <i class="fas fa-clock mr-1"></i> Jam Pelajaran (SMA)
+            </a>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -75,6 +80,9 @@
         </div>
         <div class="tab-pane fade <?= ($currentTab === 'tahun-ajar') ? 'show active' : '' ?>" id="tahun-ajar-pane" role="tabpanel" aria-labelledby="tahun-ajar-tab">
             <?= $this->include('admin/pengaturan/partials/tab_tahun_ajar') ?>
+        </div>
+        <div class="tab-pane fade <?= ($currentTab === 'jam-pelajaran') ? 'show active' : '' ?>" id="jam-pelajaran-pane" role="tabpanel" aria-labelledby="jam-pelajaran-tab">
+            <?= $this->include('admin/pengaturan/partials/tab_jam_pelajaran') ?>
         </div>
     </div>
 </div>
@@ -111,6 +119,8 @@ $(document).ready(function() {
             tabName = 'kop';
         } else if (targetId === '#tahun-ajar-pane') {
             tabName = 'tahun-ajar';
+        } else if (targetId === '#jam-pelajaran-pane') {
+            tabName = 'jam-pelajaran';
         }
         var newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabName;
         window.history.replaceState({ path: newUrl }, '', newUrl);
@@ -125,6 +135,8 @@ $(document).ready(function() {
         $('#kop-tab').tab('show');
     } else if (tabParam === 'tahun-ajar' || hashParam === '#tahun-ajar' || hashParam === '#tahun-ajar-pane') {
         $('#tahun-ajar-tab').tab('show');
+    } else if (tabParam === 'jam-pelajaran' || hashParam === '#jam-pelajaran' || hashParam === '#jam-pelajaran-pane') {
+        $('#jam-pelajaran-tab').tab('show');
     } else if (tabParam === 'identitas' || hashParam === '#identitas' || hashParam === '#identitas-pane') {
         $('#identitas-tab').tab('show');
     }

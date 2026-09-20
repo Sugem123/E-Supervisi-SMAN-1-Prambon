@@ -200,6 +200,9 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
     $routes->post('pengaturan/update-identitas', 'PengaturanController::updateIdentitas');
     $routes->post('pengaturan/update-kop', 'PengaturanController::updateKop');
     $routes->get('pengaturan/identitas-madrasah/delete-logo/(:any)', 'PengaturanController::deleteLogo/$1');
+    $routes->get('pengaturan/jam-pelajaran', 'PengaturanController::jamPelajaran');
+    $routes->post('pengaturan/update-jam-pelajaran', 'PengaturanController::updateJamPelajaran');
+    $routes->post('pengaturan/reset-jam-pelajaran', 'PengaturanController::resetJamPelajaran');
 
     // Tahun Ajaran Routes
     $routes->get('pengaturan/tahun-ajar', 'TahunAjarController::index');

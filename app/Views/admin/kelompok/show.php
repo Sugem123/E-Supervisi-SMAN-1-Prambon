@@ -352,14 +352,21 @@
 
                     <div class="form-row">
                         <div class="form-group col-md-6">
-                            <label for="sesi_mulai" class="font-weight-bold small">Jam Pelajaran Mulai</label>
+                            <label for="sesi_mulai" class="font-weight-bold small d-flex justify-content-between align-items-center">
+                                <span>Jam Pelajaran Mulai:</span>
+                                <a href="<?= base_url('admin/pengaturan?tab=jam-pelajaran'); ?>" target="_blank" class="small text-primary font-weight-normal" title="Ubah jam pelajaran di Pengaturan Sistem">
+                                    <i class="fas fa-cog mr-1"></i>Atur Jam
+                                </a>
+                            </label>
                             <select class="form-control" id="sesi_mulai" name="sesi_mulai">
-                                <option value="1">Jam Ke-1 (07:30 - 08:05)</option>
-                                <option value="2">Jam Ke-2 (08:05 - 08:40)</option>
-                                <option value="3">Jam Ke-3 (08:40 - 09:15)</option>
-                                <option value="4">Jam Ke-4 (09:15 - 09:50)</option>
-                                <option value="6">Jam Ke-6 (10:10 - 10:45)</option>
-                                <option value="7">Jam Ke-7 (10:45 - 11:20)</option>
+                                <?php 
+                                $kbmSlots = $jamPelajaranKbm ?? get_jam_pelajaran_kbm();
+                                foreach ($kbmSlots as $jk => $slot): 
+                                ?>
+                                    <option value="<?= esc($jk); ?>">
+                                        <?= esc($slot['label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-md-6">

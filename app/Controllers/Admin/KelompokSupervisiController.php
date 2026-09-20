@@ -226,6 +226,7 @@ class KelompokSupervisiController extends BaseController
             'totalTerjadwal'      => $totalTerjadwal,
             'totalSelesai'        => $totalSelesai,
             'belumTerjadwalCount' => $belumTerjadwalCount,
+            'jamPelajaranKbm'     => get_jam_pelajaran_kbm(),
         ]);
     }
 
@@ -611,16 +612,15 @@ class KelompokSupervisiController extends BaseController
             $kelases = $this->kelasModel->where('status', 'Aktif')->findAll();
         }
 
-        $slotWaktu = [
-            1 => ['jam_ke' => '1', 'waktu_dari' => '07:30', 'waktu_sampai' => '08:05'],
-            2 => ['jam_ke' => '2', 'waktu_dari' => '08:05', 'waktu_sampai' => '08:40'],
-            3 => ['jam_ke' => '3', 'waktu_dari' => '08:40', 'waktu_sampai' => '09:15'],
-            4 => ['jam_ke' => '4', 'waktu_dari' => '09:15', 'waktu_sampai' => '09:50'],
-            6 => ['jam_ke' => '6', 'waktu_dari' => '10:10', 'waktu_sampai' => '10:45'],
-            7 => ['jam_ke' => '7', 'waktu_dari' => '10:45', 'waktu_sampai' => '11:20'],
-        ];
-        $availableSlots = [1, 2, 3, 4, 6, 7];
-        $startSlotIdx = array_search((int)$sesiMulai, $availableSlots);
+        // Slot jam pelajaran diambil dinamis dari Pengaturan Sistem
+        $slotWaktu = get_jam_pelajaran_kbm();
+        $availableSlots = array_keys($slotWaktu);
+        if (empty($availableSlots)) {
+            $availableSlots = ['1'];
+            $slotWaktu = ['1' => ['jam_ke' => '1', 'waktu_dari' => '07:00', 'waktu_sampai' => '07:45']];
+        }
+
+        $startSlotIdx = array_search((string)$sesiMulai, $availableSlots, true);
         if ($startSlotIdx === false) {
             $startSlotIdx = 0;
         }
@@ -671,8 +671,8 @@ class KelompokSupervisiController extends BaseController
                 $slotNumber = $availableSlots[$currentSlotIdx];
                 $timeInfo = $slotWaktu[$slotNumber] ?? [
                     'jam_ke' => (string)$slotNumber,
-                    'waktu_dari' => '07:30',
-                    'waktu_sampai' => '08:05'
+                    'waktu_dari' => '07:00',
+                    'waktu_sampai' => '07:45'
                 ];
 
                 // Proteksi bentrok waktu: cek apakah guru sudah punya jadwal di hari dan jam yang sama

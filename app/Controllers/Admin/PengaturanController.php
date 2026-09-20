@@ -23,7 +23,7 @@ class PengaturanController extends BaseController
     public function index()
     {
         $activeTab = $this->request->getGet('tab') ?? 'identitas';
-        if (!in_array($activeTab, ['identitas', 'kop', 'tahun-ajar'])) {
+        if (!in_array($activeTab, ['identitas', 'kop', 'tahun-ajar', 'jam-pelajaran'])) {
             $activeTab = 'identitas';
         }
 
@@ -54,8 +54,74 @@ class PengaturanController extends BaseController
         ];
         $data['kop'] = get_kop_data();
         $data['tahun_ajar'] = $this->tahunAjarModel->orderBy('tahun_ajar', 'DESC')->findAll();
+        $data['jam_pelajaran'] = get_jam_pelajaran();
 
         return view('admin/pengaturan/index', $data);
+    }
+
+    public function jamPelajaran()
+    {
+        return redirect()->to('/admin/pengaturan?tab=jam-pelajaran');
+    }
+
+    public function updateJamPelajaran()
+    {
+        $jamKeList       = $this->request->getPost('jam_ke') ?? [];
+        $waktuDariList   = $this->request->getPost('waktu_dari') ?? [];
+        $waktuSampaiList = $this->request->getPost('waktu_sampai') ?? [];
+        $isIstirahatList = $this->request->getPost('is_istirahat') ?? [];
+        $keteranganList  = $this->request->getPost('keterangan') ?? [];
+
+        $cleanSlots = [];
+        $count = count($waktuDariList);
+
+        for ($i = 0; $i < $count; $i++) {
+            $jk = trim((string)($jamKeList[$i] ?? ''));
+            $dari = trim((string)($waktuDariList[$i] ?? ''));
+            $sampai = trim((string)($waktuSampaiList[$i] ?? ''));
+            $isIstirahat = (!empty($isIstirahatList[$i]) && (string)$isIstirahatList[$i] === '1') ? 1 : 0;
+            $ket = trim((string)($keteranganList[$i] ?? ''));
+
+            if ($dari === '' && $sampai === '') {
+                continue;
+            }
+
+            if ($isIstirahat && ($jk === '' || $jk === '0')) {
+                $jk = '-';
+            }
+
+            $cleanSlots[] = [
+                'jam_ke'       => $jk ?: (string)($i + 1),
+                'waktu_dari'   => substr($dari, 0, 5),
+                'waktu_sampai' => substr($sampai, 0, 5),
+                'is_istirahat' => $isIstirahat,
+                'keterangan'   => $ket ?: ($isIstirahat ? 'Istirahat' : "Jam Ke-{$jk}")
+            ];
+        }
+
+        if (empty($cleanSlots)) {
+            return redirect()->to('/admin/pengaturan?tab=jam-pelajaran')->with('error', 'Daftar jam pelajaran tidak boleh kosong.');
+        }
+
+        $this->settingModel->setSetting(
+            'jam_pelajaran',
+            json_encode($cleanSlots, JSON_UNESCAPED_UNICODE),
+            'Konfigurasi Jam Pelajaran dan Waktu Bel KBM Sekolah'
+        );
+
+        return redirect()->to('/admin/pengaturan?tab=jam-pelajaran')->with('success', 'Jadwal jam pelajaran berhasil disimpan dan diterapkan.');
+    }
+
+    public function resetJamPelajaran()
+    {
+        $default = get_default_jam_pelajaran();
+        $this->settingModel->setSetting(
+            'jam_pelajaran',
+            json_encode($default, JSON_UNESCAPED_UNICODE),
+            'Konfigurasi Jam Pelajaran Standar SMA'
+        );
+
+        return redirect()->to('/admin/pengaturan?tab=jam-pelajaran')->with('success', 'Jadwal jam pelajaran berhasil di-reset ke Standar SMA (10 Jam Pelajaran @ 45 menit).');
     }
 
     public function identitasMadrasah()

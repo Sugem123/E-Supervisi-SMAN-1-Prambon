@@ -88,16 +88,23 @@
                                 <small class="text-muted">Beban harian per supervisor</small>
                             </div>
                             <div class="col-6">
-                                <label for="sesi_mulai" class="font-weight-bold text-gray-800 small">Mulai Sesi Jam Ke-:</label>
+                                <label for="sesi_mulai" class="font-weight-bold text-gray-800 small d-flex justify-content-between align-items-center">
+                                    <span>Mulai Sesi Jam Ke-:</span>
+                                    <a href="<?= base_url('admin/pengaturan?tab=jam-pelajaran'); ?>" target="_blank" class="small text-primary font-weight-normal">
+                                        <i class="fas fa-cog mr-1"></i>Atur Jam
+                                    </a>
+                                </label>
                                 <select name="sesi_mulai" id="sesi_mulai" class="form-control form-control-sm">
-                                    <option value="1" selected>Jam Ke-1 (07.30 - 08.05)</option>
-                                    <option value="2">Jam Ke-2 (08.05 - 08.40)</option>
-                                    <option value="3">Jam Ke-3 (08.40 - 09.15)</option>
-                                    <option value="4">Jam Ke-4 (09.15 - 09.50)</option>
-                                    <option value="6">Jam Ke-6 (10.10 - 10.45)</option>
-                                    <option value="7">Jam Ke-7 (10.45 - 11.20)</option>
+                                    <?php 
+                                    $kbmSlots = get_jam_pelajaran_kbm();
+                                    foreach ($kbmSlots as $jk => $slot): 
+                                    ?>
+                                        <option value="<?= esc($jk); ?>">
+                                            <?= esc($slot['label']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
                                 </select>
-                                <small class="text-muted">Jam ke-5 (09.50-10.10) istirahat</small>
+                                <small class="text-muted">Mengikuti konfigurasi Jam Pelajaran di Pengaturan Sistem</small>
                             </div>
                         </div>
 

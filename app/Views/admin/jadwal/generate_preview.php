@@ -147,16 +147,18 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="align-middle">
-                                        <select name="override_jam[<?= $idx ?>]" class="form-control form-control-sm" style="min-width: 145px;">
-                                            <option value="1" <?= $item['jam_ke'] == '1' ? 'selected' : '' ?>>Jam 1 (07.30 - 08.05)</option>
-                                            <option value="2" <?= $item['jam_ke'] == '2' ? 'selected' : '' ?>>Jam 2 (08.05 - 08.40)</option>
-                                            <option value="3" <?= $item['jam_ke'] == '3' ? 'selected' : '' ?>>Jam 3 (08.40 - 09.15)</option>
-                                            <option value="4" <?= $item['jam_ke'] == '4' ? 'selected' : '' ?>>Jam 4 (09.15 - 09.50)</option>
-                                            <option value="6" <?= $item['jam_ke'] == '6' ? 'selected' : '' ?>>Jam 6 (10.10 - 10.45)</option>
-                                            <option value="7" <?= $item['jam_ke'] == '7' ? 'selected' : '' ?>>Jam 7 (10.45 - 11.20)</option>
-                                        </select>
-                                    </td>
+                                     <td class="align-middle">
+                                         <select name="override_jam[<?= $idx ?>]" class="form-control form-control-sm" style="min-width: 145px;">
+                                             <?php 
+                                             $previewSlots = get_jam_pelajaran_kbm();
+                                             foreach ($previewSlots as $jk => $slot): 
+                                             ?>
+                                                 <option value="<?= esc($jk) ?>" <?= (string)$item['jam_ke'] === (string)$jk ? 'selected' : '' ?>>
+                                                     Jam <?= esc($jk) ?> (<?= esc($slot['waktu_dari']) ?> - <?= esc($slot['waktu_sampai']) ?>)
+                                                 </option>
+                                             <?php endforeach; ?>
+                                         </select>
+                                     </td>
                                     <td class="align-middle">
                                         <strong><?= esc($item['nama_guru']) ?></strong>
                                         <div class="small text-muted">NIP: <?= esc($item['nip']) ?></div>
