@@ -374,16 +374,29 @@
                     </div>
 
                     <div class="form-group mb-0">
-                        <label class="font-weight-bold small d-flex justify-content-between align-items-center">
+                        <label class="font-weight-bold small d-flex justify-content-between align-items-center mb-1">
                             <span>Pilih Anggota Guru yang Dijadwalkan:</span>
                             <span class="btn btn-link btn-sm p-0 text-primary" id="btnToggleAllGuru" style="font-size: 0.8rem; text-decoration: none; cursor: pointer;">
                                 Centang Semua
                             </span>
                         </label>
-                        <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                        <?php if (!empty($anggota)): ?>
+                            <div class="input-group input-group-sm mb-2">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="searchJadwalGuru" class="form-control border-left-0" placeholder="Cari nama guru atau mata pelajaran..." autocomplete="off">
+                                <div class="input-group-append" id="wrapperClearSearchJadwal" style="display: none;">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnClearSearchJadwal" title="Hapus pencarian">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <div class="border rounded p-2 bg-light" id="listJadwalGuru" style="max-height: 200px; overflow-y: auto;">
                             <?php if (!empty($anggota)): ?>
                                 <?php foreach ($anggota as $a): ?>
-                                    <div class="custom-control custom-checkbox mb-2">
+                                    <div class="custom-control custom-checkbox mb-2 item-jadwal-guru" data-search="<?= strtolower(esc($a['nama_guru'] . ' ' . ($a['nama_mapel_ref'] ?? $a['mata_pelajaran'] ?? ''))); ?>">
                                         <input type="checkbox" class="custom-control-input check-guru-item" id="chk_guru_<?= $a['guru_id']; ?>" name="guru_ids[]" value="<?= $a['guru_id']; ?>" <?= !$a['has_jadwal'] ? 'checked' : ''; ?>>
                                         <label class="custom-control-label font-weight-bold text-gray-800" for="chk_guru_<?= $a['guru_id']; ?>">
                                             <?= esc($a['nama_guru']); ?>
@@ -396,6 +409,9 @@
                                         </label>
                                     </div>
                                 <?php endforeach; ?>
+                                <div id="noMatchJadwalGuru" class="text-muted small py-3 text-center" style="display: none;">
+                                    <i class="fas fa-search mr-1"></i> Anggota guru tidak ditemukan.
+                                </div>
                             <?php else: ?>
                                 <div class="text-muted small py-2 text-center">Belum ada anggota di kelompok ini.</div>
                             <?php endif; ?>
@@ -433,7 +449,7 @@
                     </p>
 
                     <div class="form-group mb-0">
-                        <label class="font-weight-bold small d-flex justify-content-between align-items-center">
+                        <label class="font-weight-bold small d-flex justify-content-between align-items-center mb-1">
                             <span>Daftar Guru Tersedia:</span>
                             <?php if (!empty($availableGurus)): ?>
                                 <span class="btn btn-link btn-sm p-0 text-primary" id="btnToggleAllAvailable" style="font-size: 0.8rem; text-decoration: none; cursor: pointer;">
@@ -441,10 +457,23 @@
                                 </span>
                             <?php endif; ?>
                         </label>
-                        <div class="border rounded p-2 bg-light" style="max-height: 280px; overflow-y: auto;">
+                        <?php if (!empty($availableGurus)): ?>
+                            <div class="input-group input-group-sm mb-2">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="searchAvailableGuru" class="form-control border-left-0" placeholder="Cari nama guru, mata pelajaran, atau NIP..." autocomplete="off">
+                                <div class="input-group-append" id="wrapperClearSearchAvail" style="display: none;">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="btnClearSearchAvail" title="Hapus pencarian">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <div class="border rounded p-2 bg-light" id="listAvailableGuru" style="max-height: 280px; overflow-y: auto;">
                             <?php if (!empty($availableGurus)): ?>
                                 <?php foreach ($availableGurus as $ag): ?>
-                                    <div class="custom-control custom-checkbox mb-2">
+                                    <div class="custom-control custom-checkbox mb-2 item-available-guru" data-search="<?= strtolower(esc($ag['nama'] . ' ' . ($ag['mata_pelajaran'] ?? '') . ' ' . ($ag['nip'] ?? ''))); ?>">
                                         <input type="checkbox" class="custom-control-input check-available-item" id="chk_avail_<?= $ag['id']; ?>" name="guru_ids[]" value="<?= $ag['id']; ?>">
                                         <label class="custom-control-label font-weight-bold text-gray-800" for="chk_avail_<?= $ag['id']; ?>">
                                             <?= esc($ag['nama']); ?>
@@ -452,6 +481,9 @@
                                         </label>
                                     </div>
                                 <?php endforeach; ?>
+                                <div id="noMatchAvailableGuru" class="text-muted small py-3 text-center" style="display: none;">
+                                    <i class="fas fa-search mr-1"></i> Guru dengan nama/kata kunci tersebut tidak ditemukan.
+                                </div>
                             <?php else: ?>
                                 <div class="text-muted small py-3 text-center">Seluruh data guru sudah terdaftar sebagai anggota di kelompok ini.</div>
                             <?php endif; ?>
@@ -471,17 +503,95 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. Pencarian Guru Tersedia di Modal Tambah Anggota
+    var searchAvailInput = document.getElementById('searchAvailableGuru');
+    var btnClearAvail = document.getElementById('btnClearSearchAvail');
+    var wrapperClearAvail = document.getElementById('wrapperClearSearchAvail');
+    var itemsAvail = document.querySelectorAll('.item-available-guru');
+    var noMatchAvail = document.getElementById('noMatchAvailableGuru');
+
+    if (searchAvailInput) {
+        searchAvailInput.addEventListener('input', function() {
+            var q = this.value.trim().toLowerCase();
+            if (wrapperClearAvail) {
+                wrapperClearAvail.style.display = q !== '' ? 'block' : 'none';
+            }
+            var visibleCount = 0;
+            itemsAvail.forEach(function(el) {
+                var text = el.getAttribute('data-search') || '';
+                if (q === '' || text.indexOf(q) !== -1) {
+                    el.style.display = '';
+                    visibleCount++;
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            if (noMatchAvail) {
+                noMatchAvail.style.display = (visibleCount === 0 && itemsAvail.length > 0) ? 'block' : 'none';
+            }
+        });
+
+        if (btnClearAvail) {
+            btnClearAvail.addEventListener('click', function() {
+                searchAvailInput.value = '';
+                searchAvailInput.dispatchEvent(new Event('input'));
+                searchAvailInput.focus();
+            });
+        }
+    }
+
+    // 2. Pencarian Anggota di Modal Generate Jadwal
+    var searchJadwalInput = document.getElementById('searchJadwalGuru');
+    var btnClearJadwal = document.getElementById('btnClearSearchJadwal');
+    var wrapperClearJadwal = document.getElementById('wrapperClearSearchJadwal');
+    var itemsJadwal = document.querySelectorAll('.item-jadwal-guru');
+    var noMatchJadwal = document.getElementById('noMatchJadwalGuru');
+
+    if (searchJadwalInput) {
+        searchJadwalInput.addEventListener('input', function() {
+            var q = this.value.trim().toLowerCase();
+            if (wrapperClearJadwal) {
+                wrapperClearJadwal.style.display = q !== '' ? 'block' : 'none';
+            }
+            var visibleCount = 0;
+            itemsJadwal.forEach(function(el) {
+                var text = el.getAttribute('data-search') || '';
+                if (q === '' || text.indexOf(q) !== -1) {
+                    el.style.display = '';
+                    visibleCount++;
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            if (noMatchJadwal) {
+                noMatchJadwal.style.display = (visibleCount === 0 && itemsJadwal.length > 0) ? 'block' : 'none';
+            }
+        });
+
+        if (btnClearJadwal) {
+            btnClearJadwal.addEventListener('click', function() {
+                searchJadwalInput.value = '';
+                searchJadwalInput.dispatchEvent(new Event('input'));
+                searchJadwalInput.focus();
+            });
+        }
+    }
+
+    // 3. Toggle Centang Semua (Hanya yang sedang terlihat/visible jika ada filter)
     var toggleBtn = document.getElementById('btnToggleAllGuru');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', function() {
-            var items = document.querySelectorAll('.check-guru-item');
-            var anyUnchecked = false;
-            items.forEach(function(el) {
-                if (!el.checked) anyUnchecked = true;
+            var visibleItems = [];
+            document.querySelectorAll('.item-jadwal-guru').forEach(function(wrapper) {
+                if (wrapper.style.display !== 'none') {
+                    var chk = wrapper.querySelector('.check-guru-item');
+                    if (chk) visibleItems.push(chk);
+                }
             });
-            items.forEach(function(el) {
-                el.checked = anyUnchecked;
-            });
+            if (visibleItems.length === 0) return;
+
+            var anyUnchecked = visibleItems.some(function(el) { return !el.checked; });
+            visibleItems.forEach(function(el) { el.checked = anyUnchecked; });
             toggleBtn.textContent = anyUnchecked ? 'Hapus Semua Centang' : 'Centang Semua';
         });
     }
@@ -489,15 +599,34 @@ document.addEventListener('DOMContentLoaded', function() {
     var toggleAvailBtn = document.getElementById('btnToggleAllAvailable');
     if (toggleAvailBtn) {
         toggleAvailBtn.addEventListener('click', function() {
-            var items = document.querySelectorAll('.check-available-item');
-            var anyUnchecked = false;
-            items.forEach(function(el) {
-                if (!el.checked) anyUnchecked = true;
+            var visibleItems = [];
+            document.querySelectorAll('.item-available-guru').forEach(function(wrapper) {
+                if (wrapper.style.display !== 'none') {
+                    var chk = wrapper.querySelector('.check-available-item');
+                    if (chk) visibleItems.push(chk);
+                }
             });
-            items.forEach(function(el) {
-                el.checked = anyUnchecked;
-            });
+            if (visibleItems.length === 0) return;
+
+            var anyUnchecked = visibleItems.some(function(el) { return !el.checked; });
+            visibleItems.forEach(function(el) { el.checked = anyUnchecked; });
             toggleAvailBtn.textContent = anyUnchecked ? 'Hapus Semua Centang' : 'Centang Semua';
+        });
+    }
+
+    // 4. Reset pencarian saat modal ditutup
+    if (window.jQuery) {
+        $('#addAnggotaModal').on('hidden.bs.modal', function() {
+            if (searchAvailInput) {
+                searchAvailInput.value = '';
+                searchAvailInput.dispatchEvent(new Event('input'));
+            }
+        });
+        $('#generateJadwalModal').on('hidden.bs.modal', function() {
+            if (searchJadwalInput) {
+                searchJadwalInput.value = '';
+                searchJadwalInput.dispatchEvent(new Event('input'));
+            }
         });
     }
 });
