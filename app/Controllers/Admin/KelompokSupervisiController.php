@@ -47,8 +47,9 @@ class KelompokSupervisiController extends BaseController
     {
         $tahunAktif = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first();
         $query = $this->kelompokModel
-            ->select('kelompok_supervisi.*, users.username as nama_supervisor, users.role as role_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester')
+            ->select('kelompok_supervisi.*, COALESCE(guru_spv.nama, users.username) as nama_supervisor, guru_spv.nip as nip_supervisor, users.username as username_supervisor, users.role as role_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester')
             ->join('users', 'users.id = kelompok_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->join('tahun_ajar', 'tahun_ajar.id = kelompok_supervisi.tahun_ajar_id', 'left');
 
         if ($tahunAktif) {
@@ -126,8 +127,9 @@ class KelompokSupervisiController extends BaseController
     public function show($id)
     {
         $kelompok = $this->kelompokModel
-            ->select('kelompok_supervisi.*, users.username as nama_supervisor, users.role as role_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester, tahun_ajar.status_aktif')
+            ->select('kelompok_supervisi.*, COALESCE(guru_spv.nama, users.username) as nama_supervisor, guru_spv.nip as nip_supervisor, users.username as username_supervisor, users.role as role_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester, tahun_ajar.status_aktif')
             ->join('users', 'users.id = kelompok_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->join('tahun_ajar', 'tahun_ajar.id = kelompok_supervisi.tahun_ajar_id', 'left')
             ->where('kelompok_supervisi.id', $id)->first();
 
@@ -218,6 +220,8 @@ class KelompokSupervisiController extends BaseController
             'title'               => 'Detail Kelompok Supervisi',
             'kelompok'            => $kelompok,
             'assignedJenis'       => $assignedJenis,
+            'allJenisPenilaians'  => $this->jenisModel->findAllActiveWithMappedColumns(),
+            'selectedJenisIds'    => $this->kelompokJenisModel->getJenisIdsByKelompok($id),
             'anggota'             => $anggota,
             'jadwals'             => $jadwals,
             'kelases'             => $kelases,
@@ -812,6 +816,33 @@ class KelompokSupervisiController extends BaseController
         return redirect()->to('/admin/kelompok/' . $id)->with('success', "Guru {$namaGuru} berhasil dihapus dari kelompok ini.");
     }
 
+    /**
+     * Update penugasan jenis penilaian untuk suatu kelompok.
+     */
+    public function updateJenis($id)
+    {
+        $kelompok = $this->kelompokModel->find($id);
+        if (!$kelompok) {
+            return redirect()->to('/admin/kelompok')->with('error', 'Kelompok tidak ditemukan.');
+        }
+
+        $jenisIds = (array) $this->request->getPost('jenis_penilaian_ids');
+        $this->kelompokJenisModel->syncJenis((int) $id, $jenisIds);
+
+        $count = count(array_filter($jenisIds));
+        $msg = $count > 0 
+            ? "Jenis penilaian untuk kelompok '{$kelompok['nama_kelompok']}' berhasil diperbarui ({$count} jenis instrumen ditugaskan)."
+            : "Jenis penilaian untuk kelompok '{$kelompok['nama_kelompok']}' diatur ke Semua Komponen Aktif (default).";
+
+        $this->auditLogModel->logActivity(
+            session()->get('id'),
+            'update_jenis_kelompok',
+            "Admin memperbarui penugasan jenis penilaian kelompok #{$id} ({$kelompok['nama_kelompok']})"
+        );
+
+        return redirect()->to('/admin/kelompok/' . $id)->with('success', $msg);
+    }
+
     public function delete($id)
     {
         $kelompok = $this->kelompokModel
@@ -878,10 +909,11 @@ class KelompokSupervisiController extends BaseController
     private function getSupervisors(): array
     {
         return $this->userModel
-            ->select('id, username, role')
-            ->whereIn('role', ['supervisor', 'kepala'])
-            ->where('status', 'Aktif')
-            ->orderBy('username', 'ASC')
+            ->select('users.id, users.username, users.role, COALESCE(guru.nama, users.username) as nama_lengkap, guru.nip')
+            ->join('guru', 'guru.user_id = users.id', 'left')
+            ->whereIn('users.role', ['supervisor', 'kepala'])
+            ->where('users.status', 'Aktif')
+            ->orderBy('nama_lengkap', 'ASC')
             ->findAll();
     }
 

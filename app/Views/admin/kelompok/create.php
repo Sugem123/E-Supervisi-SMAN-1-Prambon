@@ -28,7 +28,7 @@
                                 <option value="">Pilih Supervisor</option>
                                 <?php foreach ($supervisors as $s): ?>
                                     <option value="<?= $s['id']; ?>" <?= old('supervisor_id') == $s['id'] ? 'selected' : ''; ?>>
-                                        <?= esc($s['username']); ?> (<?= esc($s['role']); ?>)
+                                        <?= esc($s['nama_lengkap'] ?? $s['username']); ?><?= !empty($s['nip']) ? ' (NIP: ' . esc($s['nip']) . ')' : '' ?> (<?= esc($s['role']); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>

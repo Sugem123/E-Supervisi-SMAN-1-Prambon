@@ -103,9 +103,14 @@
                             </td>
                             <td>
                                 <i class="fas fa-user-tie mr-1 text-info"></i>
-                                <?= esc($k['nama_supervisor'] ?? '-'); ?>
+                                <strong><?= esc($k['nama_supervisor'] ?? '-'); ?></strong>
+                                <?php if (!empty($k['nip_supervisor'])): ?>
+                                    <div class="small text-muted"><i class="fas fa-id-card mr-1"></i>NIP: <?= esc($k['nip_supervisor']); ?></div>
+                                <?php elseif (!empty($k['username_supervisor']) && $k['username_supervisor'] !== ($k['nama_supervisor'] ?? '')): ?>
+                                    <div class="small text-muted"><?= esc($k['username_supervisor']); ?></div>
+                                <?php endif; ?>
                                 <?php if (!empty($k['role_supervisor'])): ?>
-                                    <span class="badge badge-light border"><?= esc($k['role_supervisor']); ?></span>
+                                    <span class="badge badge-light border mt-1 font-weight-normal"><?= ucfirst(esc($k['role_supervisor'])); ?></span>
                                 <?php endif; ?>
                             </td>
                             <td><?= esc(($k['tahun_ajar'] ?? '-') . (isset($k['semester']) ? ' - ' . $k['semester'] : '')); ?></td>

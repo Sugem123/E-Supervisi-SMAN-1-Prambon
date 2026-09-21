@@ -123,9 +123,14 @@
                             <td class="text-muted">Supervisor Pembina</td>
                             <td>:</td>
                             <td>
-                                <strong><?= esc($kelompok['nama_supervisor'] ?? '-'); ?></strong>
+                                <div><strong class="text-gray-900 font-weight-bold" style="font-size: 0.95rem;"><?= esc($kelompok['nama_supervisor'] ?? '-'); ?></strong></div>
+                                <?php if (!empty($kelompok['nip_supervisor'])): ?>
+                                    <small class="text-muted d-block"><i class="fas fa-id-card mr-1"></i>NIP: <?= esc($kelompok['nip_supervisor']); ?></small>
+                                <?php elseif (!empty($kelompok['username_supervisor']) && $kelompok['username_supervisor'] !== ($kelompok['nama_supervisor'] ?? '')): ?>
+                                    <small class="text-muted d-block"><i class="fas fa-user mr-1"></i><?= esc($kelompok['username_supervisor']); ?></small>
+                                <?php endif; ?>
                                 <?php if (!empty($kelompok['role_supervisor'])): ?>
-                                    <span class="badge badge-light border ml-1"><?= esc($kelompok['role_supervisor']); ?></span>
+                                    <span class="badge badge-light border mt-1 font-weight-normal"><?= ucfirst(esc($kelompok['role_supervisor'])); ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -139,9 +144,14 @@
                     <hr>
 
                     <!-- Jenis Penilaian yang Ditugaskan -->
-                    <h6 class="font-weight-bold text-dark mb-2">
-                        <i class="fas fa-tasks text-primary mr-1"></i> Jenis Penilaian Ditugaskan:
-                    </h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="font-weight-bold text-dark mb-0">
+                            <i class="fas fa-tasks text-primary mr-1"></i> Jenis Penilaian Ditugaskan:
+                        </h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2 shadow-sm font-weight-bold" data-toggle="modal" data-target="#editJenisModal" style="font-size: 0.78rem;">
+                            <i class="fas fa-edit mr-1"></i> Edit Jenis
+                        </button>
+                    </div>
                     <div class="mb-3">
                         <?php if (!empty($assignedJenis)): ?>
                             <ul class="list-group list-group-flush small">
@@ -429,6 +439,66 @@
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mulai generate jadwal otomatis untuk guru yang dipilih?')">
                         <i class="fas fa-magic mr-1"></i> Mulai Generate Jadwal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Jenis Penilaian Ditugaskan -->
+<div class="modal fade" id="editJenisModal" tabindex="-1" role="dialog" aria-labelledby="editJenisModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="<?= base_url('admin/kelompok/' . $kelompok['id'] . '/update-jenis'); ?>" method="post">
+                <?= csrf_field(); ?>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title font-weight-bold" id="editJenisModalLabel">
+                        <i class="fas fa-tasks mr-1"></i> Edit Jenis Penilaian Ditugaskan
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i> Kelompok: <strong><?= esc($kelompok['nama_kelompok']); ?></strong> &bull; Supervisor: <strong><?= esc($kelompok['nama_supervisor'] ?? '-'); ?></strong>
+                    </div>
+
+                    <p class="small text-muted mb-2">
+                        Pilih jenis instrumen penilaian yang ditugaskan kepada supervisor kelompok ini. Anda dapat mencentang satu atau beberapa jenis penilaian:
+                    </p>
+
+                    <div class="border rounded p-3 bg-light" style="max-height: 280px; overflow-y: auto;">
+                        <?php if (!empty($allJenisPenilaians)): ?>
+                            <?php foreach ($allJenisPenilaians as $jp): ?>
+                                <?php $isChecked = in_array((int)$jp['id'], array_map('intval', (array)($selectedJenisIds ?? []))); ?>
+                                <div class="custom-control custom-checkbox mb-2 pb-2 border-bottom">
+                                    <input type="checkbox" class="custom-control-input" id="modal_jp_<?= $jp['id'] ?>" name="jenis_penilaian_ids[]" value="<?= $jp['id'] ?>" <?= $isChecked ? 'checked' : '' ?>>
+                                    <label class="custom-control-label font-weight-bold text-gray-800" for="modal_jp_<?= $jp['id'] ?>">
+                                        <?= esc($jp['nama_jenis'] ?? $jp['nama']) ?>
+                                    </label>
+                                    <div class="d-flex align-items-center mt-1">
+                                        <span class="badge badge-light border mr-2">Maks Skor: <?= esc($jp['skor_maksimal'] ?? 100) ?></span>
+                                        <?php if (!empty($jp['status']) && $jp['status'] === 'Nonaktif'): ?>
+                                            <span class="badge badge-warning">Nonaktif</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="text-muted small py-3 text-center">Belum ada jenis penilaian aktif di sistem.</div>
+                        <?php endif; ?>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                        <i class="fas fa-asterisk text-warning mr-1"></i> Bila seluruhnya tidak dicentang, sistem otomatis menerapkan <strong>Semua Komponen Aktif</strong> secara default.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save mr-1"></i> Simpan Penugasan Jenis
                     </button>
                 </div>
             </form>

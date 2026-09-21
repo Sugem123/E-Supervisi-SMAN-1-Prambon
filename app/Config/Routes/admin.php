@@ -74,6 +74,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
     $routes->get('kelompok/(:num)/delete', 'KelompokSupervisiController::delete/$1');
     $routes->post('kelompok/carry-over', 'KelompokSupervisiController::carryOver');
     $routes->post('kelompok/(:num)/generate-jadwal', 'KelompokSupervisiController::generateJadwal/$1');
+    $routes->post('kelompok/(:num)/update-jenis', 'KelompokSupervisiController::updateJenis/$1');
     $routes->post('kelompok/(:num)/add-anggota', 'KelompokSupervisiController::addAnggota/$1');
     $routes->post('kelompok/(:num)/delete-anggota/(:num)', 'KelompokSupervisiController::deleteAnggota/$1/$2');
     $routes->get('kelompok/(:num)/delete-anggota/(:num)', 'KelompokSupervisiController::deleteAnggota/$1/$2');
