@@ -38,25 +38,36 @@
             <?php endif; ?>
 
             <div class="table-responsive">
-                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                    <thead>
+                <table class="table table-bordered table-hover align-middle" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="thead-light">
                         <tr>
+                            <th width="4%" class="text-center">No</th>
+                            <th>Nama Lengkap</th>
                             <th>Username</th>
                             <th>Email</th>
                             <th>NIP</th>
-                            <th>Role</th>
-                            <th>Status</th>
+                            <th width="10%" class="text-center">Role</th>
+                            <th width="8%" class="text-center">Status</th>
                             <th>Terakhir Login</th>
-                            <th>Aksi</th>
+                            <th width="15%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($users as $user): ?>
+                        <?php $no = 1; foreach ($users as $user): ?>
                             <tr>
-                                <td><?= $user['username'] ?></td>
-                                <td><?= $user['email'] ?></td>
-                                <td><?= $user['nip'] ?? '-' ?></td>
-                                <td>
+                                <td class="text-center align-middle"><?= $no++ ?></td>
+                                <td class="align-middle">
+                                    <strong class="text-gray-900"><?= esc($user['nama_lengkap'] ?? $user['username']) ?></strong>
+                                    <?php if (!empty($user['mata_pelajaran'])): ?>
+                                        <div class="small text-muted"><i class="fas fa-book-open mr-1"></i><?= esc($user['mata_pelajaran']) ?></div>
+                                    <?php elseif ($user['role'] === 'admin'): ?>
+                                        <div class="small text-muted"><i class="fas fa-user-shield mr-1"></i>Administrator Sistem</div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="align-middle"><code><?= esc($user['username']) ?></code></td>
+                                <td class="align-middle"><?= esc($user['email']) ?></td>
+                                <td class="align-middle"><?= esc(!empty($user['nip_gabungan']) ? $user['nip_gabungan'] : ($user['nip'] ?? '-')) ?></td>
+                                <td class="align-middle text-center">
                                     <?php $badge = [
                                         'admin' => 'dark',
                                         'kepala' => 'primary',
@@ -64,17 +75,17 @@
                                         'guru' => 'info',
                                     ];
                                     $role = strtolower($user['role']); ?>
-                                    <span class="badge badge-<?= $badge[$role] ?? 'secondary' ?>"><?= ucfirst($role) ?></span>
+                                    <span class="badge badge-<?= $badge[$role] ?? 'secondary' ?> px-2 py-1"><?= ucfirst($role) ?></span>
                                 </td>
-                                <td>
+                                <td class="align-middle text-center">
                                     <?php if (strtolower($user['status']) == 'aktif'): ?>
-                                        <span class="badge badge-success">Aktif</span>
+                                        <span class="badge badge-success px-2 py-1">Aktif</span>
                                     <?php else: ?>
-                                        <span class="badge badge-danger">Nonaktif</span>
+                                        <span class="badge badge-danger px-2 py-1">Nonaktif</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= $user['last_login'] ?? '-' ?></td>
-                                <td class="text-nowrap">
+                                <td class="align-middle"><?= $user['last_login'] ?? '-' ?></td>
+                                <td class="text-nowrap text-center align-middle">
                                     <a href="<?= base_url('/admin/pengguna/' . $user['id'] . '/edit') ?>" class="btn btn-warning btn-sm" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>

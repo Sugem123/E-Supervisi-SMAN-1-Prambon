@@ -32,13 +32,21 @@ class PenggunaController extends BaseController
 
     public function index()
     {
-        $data['users'] = $this->userModel->findAll();
+        $data['users'] = $this->userModel
+            ->select('users.*, COALESCE(guru.nama, users.username) as nama_lengkap, guru.nama as nama_guru, COALESCE(guru.nip, users.nip) as nip_gabungan, guru.mata_pelajaran, guru.jenis_ptk')
+            ->join('guru', 'guru.user_id = users.id', 'left')
+            ->orderBy('users.id', 'ASC')
+            ->findAll();
         return view('admin/pengguna/index', $data);
     }
 
     public function semua()
     {
-        $data['users'] = $this->userModel->findAll();
+        $data['users'] = $this->userModel
+            ->select('users.*, COALESCE(guru.nama, users.username) as nama_lengkap, guru.nama as nama_guru, COALESCE(guru.nip, users.nip) as nip_gabungan, guru.mata_pelajaran, guru.jenis_ptk')
+            ->join('guru', 'guru.user_id = users.id', 'left')
+            ->orderBy('users.id', 'ASC')
+            ->findAll();
         return view('admin/pengguna/index', $data);
     }
 
