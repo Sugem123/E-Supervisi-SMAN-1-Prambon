@@ -2,7 +2,13 @@
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center flex-wrap">
         <h6 class="m-0 font-weight-bold text-primary">Daftar Aspek Penilaian</h6>
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center flex-wrap mt-2 mt-sm-0">
+            <a href="<?= base_url('/admin/instrumen/aspek-penilaian/template') ?>" class="btn btn-outline-success btn-sm mr-2 shadow-sm" title="Unduh format template Excel resmi">
+                <i class="fas fa-file-excel mr-1"></i> Download Template Excel
+            </a>
+            <button type="button" class="btn btn-success btn-sm mr-2 shadow-sm" data-toggle="modal" data-target="#importAspekModal">
+                <i class="fas fa-file-import mr-1"></i> Impor Aspek Excel
+            </button>
             <div class="dropdown mr-2">
                 <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="menuCepatJenis" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-layer-group mr-1"></i> Jenis Penilaian
@@ -205,6 +211,61 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Impor Aspek Penilaian Excel -->
+<div class="modal fade" id="importAspekModal" tabindex="-1" role="dialog" aria-labelledby="importAspekModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="<?= base_url('/admin/instrumen/aspek-penilaian/import') ?>" method="post" enctype="multipart/form-data">
+                <?= csrf_field() ?>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold" id="importAspekModalLabel">
+                        <i class="fas fa-file-excel mr-1"></i> Impor Aspek Penilaian dari Excel
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Anda dapat mengimpor banyak indikator/aspek penilaian sekaligus. Jika nama <strong>Jenis Penilaian</strong> pada file Excel belum ada di sistem, sistem akan otomatis membuatnya secara cerdas.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="font-weight-bold small">1. Download Template Format Excel:</label>
+                        <div>
+                            <a href="<?= base_url('/admin/instrumen/aspek-penilaian/template') ?>" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-download mr-1"></i> Download File Template Aspek (.xlsx)
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-1">Gunakan template resmi agar kolom dan format terbaca dengan tepat oleh sistem.</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="excel_file_aspek" class="font-weight-bold small">2. Pilih File Excel (.xlsx / .xls) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control-file border rounded p-2" id="excel_file_aspek" name="excel_file" accept=".xlsx, .xls" required>
+                        <small class="text-muted">Ukuran berkas maksimal 10MB.</small>
+                    </div>
+
+                    <div class="custom-control custom-checkbox small mt-2">
+                        <input type="checkbox" class="custom-control-input" id="replaceExistingAspek" name="replace_existing" value="1">
+                        <label class="custom-control-label text-gray-800" for="replaceExistingAspek">
+                            Bersihkan aspek lama yang belum pernah dinilai (opsional)
+                        </label>
+                        <small class="text-muted d-block">Aspek yang sudah memiliki riwayat penilaian supervisi tetap aman dan tidak akan terhapus.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm font-weight-bold">
+                        <i class="fas fa-upload mr-1"></i> Upload & Impor Sekarang
+                    </button>
                 </div>
             </form>
         </div>

@@ -135,6 +135,8 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'au
     $routes->get('instrumen/jenis-penilaian/(:num)/delete', 'InstrumenController::deleteJenisPenilaian/$1');
     $routes->post('instrumen/jenis-penilaian/(:num)/toggle-status', 'InstrumenController::toggleJenisStatus/$1');
     $routes->get('instrumen/aspek-penilaian', 'InstrumenController::aspekPenilaian');
+    $routes->get('instrumen/aspek-penilaian/template', 'InstrumenController::downloadTemplateAspek');
+    $routes->post('instrumen/aspek-penilaian/import', 'InstrumenController::processImportAspek');
     $routes->post('instrumen/aspek-penilaian/create', 'InstrumenController::createAspekPenilaian');
     $routes->post('instrumen/aspek-penilaian/(:num)/update', 'InstrumenController::updateAspekPenilaian/$1');
     $routes->get('instrumen/aspek-penilaian/(:num)/delete', 'InstrumenController::deleteAspekPenilaian/$1');
