@@ -19,6 +19,9 @@ $routes->group('guru', ['filter' => 'auth:guru'], function ($routes) {
 
     // Jadwal routes
     $routes->get('jadwal', 'Guru\JadwalController::index');
+    $routes->post('jadwal/(:num)/update-kelas', 'Guru\JadwalController::updateKelas/$1');
+    $routes->post('jadwal/(:num)/ajukan-batal', 'Guru\JadwalController::ajukanBatal/$1');
+    $routes->post('jadwal/(:num)/batalkan-ajuan', 'Guru\JadwalController::batalkanAjuan/$1');
 
     // Hasil routes
     $routes->get('hasil', 'Guru\HasilController::index');

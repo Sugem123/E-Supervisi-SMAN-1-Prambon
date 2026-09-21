@@ -23,7 +23,18 @@ class JadwalSupervisiModel extends Model
         'waktu_dari',
         'waktu_sampai',
         'materi_supervisi',
-        'status'
+        'status',
+        'status_ajuan',
+        'alasan_batal',
+        'usulan_tanggal',
+        'usulan_hari',
+        'usulan_jam_ke',
+        'usulan_waktu_dari',
+        'usulan_waktu_sampai',
+        'usulan_kelas_id',
+        'usulan_kelas',
+        'catatan_supervisor',
+        'tgl_respon_supervisor'
     ];
     protected $useTimestamps = false;
     protected $createdField  = 'created_at';

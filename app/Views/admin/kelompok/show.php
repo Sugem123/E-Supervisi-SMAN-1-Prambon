@@ -11,6 +11,11 @@
             </p>
         </div>
         <div class="mt-3 mt-sm-0">
+            <?php if (!empty($jadwals)): ?>
+                <a href="<?= base_url('admin/kelompok/' . $kelompok['id'] . '/cetak-jadwal'); ?>" target="_blank" class="btn btn-outline-danger btn-sm shadow-sm mr-1" title="Cetak / Unduh Dokumen Jadwal Supervisi Kelompok (PDF)">
+                    <i class="fas fa-print mr-1"></i> Cetak Jadwal (PDF)
+                </a>
+            <?php endif; ?>
             <button type="button" class="btn btn-success btn-sm shadow-sm mr-1" data-toggle="modal" data-target="#generateModal">
                 <i class="fas fa-magic mr-1"></i> Generate Jadwal Kelompok
             </button>
@@ -192,15 +197,22 @@
                     <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-calendar-alt mr-1"></i> Jadwal Supervisi Anggota Kelompok
                     </h6>
-                    <?php if ($belumTerjadwalCount > 0): ?>
-                        <span class="badge badge-warning">
-                            <i class="fas fa-exclamation-circle mr-1"></i> <?= $belumTerjadwalCount; ?> guru belum dijadwalkan
-                        </span>
-                    <?php else: ?>
-                        <span class="badge badge-success">
-                            <i class="fas fa-check-circle mr-1"></i> Semua guru sudah dijadwalkan
-                        </span>
-                    <?php endif; ?>
+                    <div class="d-flex align-items-center flex-wrap mt-2 mt-sm-0">
+                        <?php if (!empty($jadwals)): ?>
+                            <a href="<?= base_url('admin/kelompok/' . $kelompok['id'] . '/cetak-jadwal'); ?>" target="_blank" class="btn btn-outline-danger btn-sm shadow-sm mr-2" title="Cetak / Unduh Jadwal Supervisi Kelompok (PDF)">
+                                <i class="fas fa-print mr-1"></i> Cetak Jadwal (PDF)
+                            </a>
+                        <?php endif; ?>
+                        <?php if ($belumTerjadwalCount > 0): ?>
+                            <span class="badge badge-warning">
+                                <i class="fas fa-exclamation-circle mr-1"></i> <?= $belumTerjadwalCount; ?> guru belum dijadwalkan
+                            </span>
+                        <?php else: ?>
+                            <span class="badge badge-success">
+                                <i class="fas fa-check-circle mr-1"></i> Semua guru sudah dijadwalkan
+                            </span>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($jadwals)): ?>

@@ -13,6 +13,8 @@ use App\Models\GuruModel;
 use App\Models\UserModel;
 use App\Models\TahunAjarModel;
 use App\Models\AuditLogModel;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class KelompokSupervisiController extends BaseController
 {
@@ -859,6 +861,84 @@ class KelompokSupervisiController extends BaseController
         );
 
         return redirect()->to('/admin/kelompok/' . $id)->with('success', $msg);
+    }
+
+    /**
+     * Cetak jadwal pelaksanaan supervisi per kelompok dalam format PDF resmi.
+     */
+    public function cetakJadwal($id)
+    {
+        try {
+            helper(['setting', 'date']);
+
+            $kelompok = $this->kelompokModel
+                ->select('kelompok_supervisi.*, COALESCE(guru_spv.nama, users.username) as nama_supervisor, guru_spv.nip as nip_supervisor, users.username as username_supervisor, users.role as role_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester')
+                ->join('users', 'users.id = kelompok_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
+                ->join('tahun_ajar', 'tahun_ajar.id = kelompok_supervisi.tahun_ajar_id', 'left')
+                ->where('kelompok_supervisi.id', $id)
+                ->first();
+
+            if (!$kelompok) {
+                return redirect()->to('/admin/kelompok')->with('error', 'Kelompok tidak ditemukan.');
+            }
+
+            $assignedJenis = $this->kelompokJenisModel->getJenisByKelompok((int)$id);
+
+            // Ambil seluruh jadwal supervisi dalam kelompok ini
+            $jadwals = $this->db->table('jadwal_supervisi js')
+                ->select('js.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.jenis_ptk, kelas.nama_kelas')
+                ->join('guru', 'guru.id = js.guru_id', 'left')
+                ->join('kelas', 'kelas.id = js.kelas_id', 'left')
+                ->where('js.kelompok_id', (int)$id)
+                ->orderBy('js.tanggal_supervisi', 'ASC')
+                ->orderBy('js.jam_ke', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            if (empty($jadwals)) {
+                return redirect()->to('/admin/kelompok/' . $id)->with('error', 'Belum ada jadwal supervisi yang dibuat untuk kelompok ini.');
+            }
+
+            $data = [
+                'kelompok'      => $kelompok,
+                'assignedJenis' => $assignedJenis,
+                'jadwals'       => $jadwals,
+                'nama_kepala'   => get_pengaturan('nama_kepala', ''),
+                'nip_kepala'    => get_pengaturan('nip_kepala', ''),
+                'kota'          => get_pengaturan('kecamatan', 'Prambon'),
+                'tanggal_cetak' => date('Y-m-d')
+            ];
+
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            $html = view('admin/kelompok/pdf_jadwal', $data);
+
+            $options = new Options();
+            $options->set('defaultFont', 'DejaVu Sans');
+            $options->set('isRemoteEnabled', true);
+            $options->set('isPhpEnabled', true);
+            $options->set('chroot', [ROOTPATH, FCPATH]);
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'landscape');
+            $dompdf->render();
+
+            $cleanName = preg_replace('/[^A-Za-z0-9]/', '-', strtolower($kelompok['nama_kelompok']));
+            $filename = 'jadwal-supervisi-' . $cleanName . '-' . date('Ymd') . '.pdf';
+
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="' . $filename . '"');
+
+            $dompdf->stream($filename, ['Attachment' => 0]);
+            exit();
+        } catch (\Throwable $e) {
+            log_message('error', 'Error cetak jadwal kelompok: ' . $e->getMessage());
+            return redirect()->to('/admin/kelompok/' . $id)->with('error', 'Gagal mencetak jadwal supervisi: ' . $e->getMessage());
+        }
     }
 
     public function delete($id)
