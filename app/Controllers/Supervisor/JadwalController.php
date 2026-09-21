@@ -282,4 +282,147 @@ class JadwalController extends BaseController
 
         return redirect()->to('/supervisor/jadwal')->with('success', "Jadwal supervisi baru untuk {$guru['nama']} berhasil diterbitkan.");
     }
+
+    /**
+     * Supervisor memperbarui / mengganti jadwal supervisi.
+     */
+    public function updateJadwal($id)
+    {
+        $supervisorId = (int) session()->get('id');
+
+        $schedule = $this->jadwalModel
+            ->where('id', $id)
+            ->where('supervisor_id', $supervisorId)
+            ->first();
+
+        if (!$schedule) {
+            return redirect()->to('/supervisor/jadwal')->with('error', 'Jadwal supervisi tidak ditemukan atau bukan binaan Anda.');
+        }
+
+        $rules = [
+            'tanggal_supervisi' => 'required|valid_date',
+            'jam_ke'            => 'required',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Harap isi tanggal dan jam pelaksanaan dengan benar.');
+        }
+
+        $tanggalSupervisi = trim($this->request->getPost('tanggal_supervisi'));
+        $jamKe            = trim($this->request->getPost('jam_ke'));
+        $kelasId          = $this->request->getPost('kelas_id');
+        $materiSupervisi  = trim((string)$this->request->getPost('materi_supervisi'));
+
+        $guru = $this->guruModel->find($schedule['guru_id']);
+        $namaGuru = $guru['nama'] ?? 'Pegawai';
+
+        // Tanggal dan Hari
+        $hariMap = [
+            'Monday'    => 'Senin',
+            'Tuesday'   => 'Selasa',
+            'Wednesday' => 'Rabu',
+            'Thursday'  => 'Kamis',
+            'Friday'    => 'Jumat',
+            'Saturday'  => 'Sabtu',
+            'Sunday'    => 'Minggu'
+        ];
+        $dayEnglish = date('l', strtotime($tanggalSupervisi));
+        $hariIndo = $hariMap[$dayEnglish] ?? 'Senin';
+
+        // Slot waktu KBM
+        $kbmSlots = get_jam_pelajaran_kbm();
+        $waktuDari = '07:00';
+        $waktuSampai = '07:45';
+        if (isset($kbmSlots[$jamKe])) {
+            $waktuDari   = $kbmSlots[$jamKe]['waktu_dari'];
+            $waktuSampai = $kbmSlots[$jamKe]['waktu_sampai'];
+        }
+
+        $isTendik = (
+            ($guru['jenis_ptk'] ?? '') === 'Tendik' ||
+            stripos($schedule['mata_pelajaran'] ?? '', 'tata usaha') !== false ||
+            stripos($schedule['mata_pelajaran'] ?? '', 'administrasi') !== false
+        );
+
+        $kelasNama = '-';
+        $targetKelasId = null;
+        if (!$isTendik && !empty($kelasId)) {
+            $kRow = $this->kelasModel->find($kelasId);
+            if ($kRow) {
+                $kelasNama = $kRow['nama_kelas'];
+                $targetKelasId = (int)$kelasId;
+            }
+        } elseif (!$isTendik && empty($kelasId) && !empty($schedule['kelas_id'])) {
+            $targetKelasId = $schedule['kelas_id'];
+            $kelasNama     = $schedule['kelas'];
+        }
+
+        $updateData = [
+            'tanggal_supervisi' => $tanggalSupervisi,
+            'hari'              => $hariIndo,
+            'jam_ke'            => $jamKe,
+            'waktu_dari'        => $waktuDari,
+            'waktu_sampai'      => $waktuSampai,
+            'kelas_id'          => $targetKelasId,
+            'kelas'             => $kelasNama,
+            'materi_supervisi'  => !empty($materiSupervisi) ? $materiSupervisi : ($schedule['materi_supervisi'] ?? 'Supervisi Akademik'),
+        ];
+
+        // Jika sebelumnya ada status ajuan Diajukan, otomatis disetujui karena supervisor sendiri yang mengubah
+        if (($schedule['status_ajuan'] ?? '') === 'Diajukan') {
+            $updateData['status_ajuan']          = 'Disetujui';
+            $updateData['catatan_supervisor']    = 'Jadwal telah diperbarui langsung oleh Supervisor.';
+            $updateData['tgl_respon_supervisor'] = date('Y-m-d H:i:s');
+        }
+
+        $this->jadwalModel->update($id, $updateData);
+
+        $tglIndo = format_tanggal_indonesia($tanggalSupervisi, false);
+        return redirect()->to('/supervisor/jadwal')->with('success', "Jadwal supervisi untuk {$namaGuru} berhasil diperbarui ke tanggal {$tglIndo} (Jam Ke-{$jamKe}).");
+    }
+
+    /**
+     * Supervisor menghapus jadwal supervisi binaan.
+     */
+    public function deleteJadwal($id)
+    {
+        $supervisorId = (int) session()->get('id');
+
+        $schedule = $this->jadwalModel
+            ->where('id', $id)
+            ->where('supervisor_id', $supervisorId)
+            ->first();
+
+        if (!$schedule) {
+            return redirect()->to('/supervisor/jadwal')->with('error', 'Jadwal supervisi tidak ditemukan atau bukan binaan Anda.');
+        }
+
+        $guru = $this->guruModel->find($schedule['guru_id']);
+        $namaGuru = $guru['nama'] ?? 'Pegawai';
+
+        $this->db->transStart();
+
+        // Hapus hasil supervisi & detail penilaian jika ada
+        $hasilRows = $this->db->table('hasil_supervisi')->where('jadwal_supervisi_id', $id)->get()->getResultArray();
+        if (!empty($hasilRows)) {
+            $hasilIds = array_column($hasilRows, 'id');
+            $this->db->table('detail_hasil_penilaian')->whereIn('hasil_supervisi_id', $hasilIds)->delete();
+            $this->db->table('hasil_supervisi')->where('jadwal_supervisi_id', $id)->delete();
+        }
+
+        // Hapus bukti & dokumen
+        $this->db->table('foto_bukti')->where('jadwal_supervisi_id', $id)->delete();
+        $this->db->table('dokumen_ajar')->where('jadwal_id', $id)->delete();
+
+        // Hapus jadwal
+        $this->jadwalModel->delete($id);
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            return redirect()->to('/supervisor/jadwal')->with('error', 'Gagal menghapus jadwal supervisi.');
+        }
+
+        return redirect()->to('/supervisor/jadwal')->with('success', "Jadwal supervisi untuk {$namaGuru} berhasil dihapus.");
+    }
 }

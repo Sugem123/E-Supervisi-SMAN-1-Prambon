@@ -166,9 +166,18 @@
                                                 </a>
                                             <?php endif; ?>
                                             <a href="<?= base_url('supervisor/dokumen-ajar/view/' . $schedule['id']) ?>" class="btn btn-warning" title="Lihat Perangkat / Dokumen Ajar">
-                                                <i class="fas fa-folder-open"></i> Dokumen
+                                                <i class="fas fa-folder-open"></i>
                                             </a>
-                                            <a href="<?= base_url('supervisor/jadwal/' . $schedule['id']) ?>" class="btn btn-info" title="Lihat Detail">
+                                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editJadwalModal<?= $schedule['id']; ?>" title="Edit / Ganti Jadwal Supervisi">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <form action="<?= base_url('supervisor/jadwal/' . $schedule['id'] . '/delete'); ?>" method="post" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus jadwal supervisi untuk <?= esc(addslashes($schedule['nama_guru'])); ?>?');">
+                                                <?= csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger" title="Hapus Jadwal Supervisi">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            <a href="<?= base_url('supervisor/jadwal/' . $schedule['id']) ?>" class="btn btn-secondary" title="Lihat Detail">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </div>
@@ -178,17 +187,109 @@
                                                 <i class="fas fa-file-alt"></i> Hasil
                                             </a>
                                             <a href="<?= base_url('supervisor/penilaian/form/' . $schedule['id']) ?>" class="btn btn-warning" title="Edit Penilaian">
-                                                <i class="fas fa-edit"></i>
+                                                <i class="fas fa-edit"></i> Nilai
                                             </a>
                                             <a href="<?= base_url('supervisor/foto-bukti/upload/' . $schedule['id']) ?>" class="btn btn-success" title="Upload Bukti / Berita Acara">
                                                 <i class="fas fa-camera"></i>
                                             </a>
+                                            <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#editJadwalModal<?= $schedule['id']; ?>" title="Edit Tanggal / Jam Jadwal">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </button>
+                                            <form action="<?= base_url('supervisor/jadwal/' . $schedule['id'] . '/delete'); ?>" method="post" class="d-inline" onsubmit="return confirm('PERINGATAN: Jadwal ini sudah berstatus Selesai. Menghapus jadwal akan menghapus seluruh data penilaian hasil supervisi untuk <?= esc(addslashes($schedule['nama_guru'])); ?>. Lanjutkan?');">
+                                                <?= csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger" title="Hapus Jadwal & Nilai">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     <?php else: ?>
-                                        <a href="<?= base_url('supervisor/jadwal/' . $schedule['id']) ?>" class="btn btn-sm btn-secondary">
-                                            <i class="fas fa-info-circle mr-1"></i>Detail
-                                        </a>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editJadwalModal<?= $schedule['id']; ?>" title="Edit / Ganti Jadwal">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <form action="<?= base_url('supervisor/jadwal/' . $schedule['id'] . '/delete'); ?>" method="post" class="d-inline" onsubmit="return confirm('Hapus jadwal supervisi ini?');">
+                                                <?= csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger" title="Hapus Jadwal">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            <a href="<?= base_url('supervisor/jadwal/' . $schedule['id']) ?>" class="btn btn-secondary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
                                     <?php endif; ?>
+
+                                    <!-- Modal Edit / Ganti Jadwal Supervisi -->
+                                    <div class="modal fade text-left" id="editJadwalModal<?= $schedule['id']; ?>" tabindex="-1" role="dialog" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg" role="document">
+                                            <div class="modal-content">
+                                                <form action="<?= base_url('supervisor/jadwal/' . $schedule['id'] . '/update-jadwal'); ?>" method="post">
+                                                    <?= csrf_field(); ?>
+                                                    <div class="modal-header bg-primary text-white">
+                                                        <h5 class="modal-title font-weight-bold" style="font-size: 1.05rem;">
+                                                            <i class="fas fa-calendar-check mr-1"></i> Edit / Ganti Jadwal Supervisi
+                                                        </h5>
+                                                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="alert alert-info border-0 small mb-3">
+                                                            Pegawai / Guru: <strong><?= esc($schedule['nama_guru']); ?></strong>
+                                                            <?php if (!empty($schedule['nip_guru'])): ?>
+                                                                &bull; NIP: <?= esc($schedule['nip_guru']); ?>
+                                                            <?php endif; ?>
+                                                            &bull; Tugas: <strong><?= esc($schedule['mata_pelajaran'] ?? '-'); ?></strong>
+                                                        </div>
+
+                                                        <div class="form-row">
+                                                            <div class="form-group col-md-4">
+                                                                <label class="font-weight-bold small">Tanggal Pelaksanaan: <span class="text-danger">*</span></label>
+                                                                <input type="date" class="form-control" name="tanggal_supervisi" value="<?= esc($schedule['tanggal_supervisi']); ?>" required>
+                                                            </div>
+                                                            <div class="form-group col-md-4">
+                                                                <label class="font-weight-bold small">Jam Pelajaran: <span class="text-danger">*</span></label>
+                                                                <select class="form-control" name="jam_ke" required>
+                                                                    <?php foreach (($jamPelajaranKbm ?? []) as $jk => $slot): ?>
+                                                                        <option value="<?= esc($jk); ?>" <?= ((string)($schedule['jam_ke'] ?? '') === (string)$jk) ? 'selected' : ''; ?>>
+                                                                            <?= esc($slot['label']); ?>
+                                                                        </option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
+                                                            </div>
+                                                            <div class="form-group col-md-4">
+                                                                <label class="font-weight-bold small">Kelas Observasi:</label>
+                                                                <?php if ($isTendik): ?>
+                                                                    <input type="text" class="form-control bg-light" value="Non-KBM / Tendik" readonly>
+                                                                    <input type="hidden" name="kelas_id" value="">
+                                                                <?php else: ?>
+                                                                    <select class="form-control" name="kelas_id">
+                                                                        <option value="">-- Non-KBM / Tetap Kelas Saat Ini --</option>
+                                                                        <?php foreach ($kelases as $kls): ?>
+                                                                            <option value="<?= $kls['id']; ?>" <?= ((string)($schedule['kelas_id'] ?? '') === (string)$kls['id']) ? 'selected' : ''; ?>>
+                                                                                Kelas <?= esc($kls['nama_kelas']); ?>
+                                                                            </option>
+                                                                        <?php endforeach; ?>
+                                                                    </select>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="form-group mb-0">
+                                                            <label class="font-weight-bold small">Materi / Fokus Supervisi:</label>
+                                                            <input type="text" class="form-control" name="materi_supervisi" value="<?= esc($schedule['materi_supervisi'] ?? ''); ?>" placeholder="Materi supervisi...">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm font-weight-bold">
+                                                            <i class="fas fa-save mr-1"></i> Simpan Perubahan Jadwal
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <!-- Modal Respon Ajuan Pembatalan & Jadwal Pengganti -->
                                     <?php if ($statusAjuan === 'Diajukan'): ?>

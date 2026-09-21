@@ -32,6 +32,9 @@ $routes->group('supervisor', ['filter' => 'auth:supervisor'], function ($routes)
     // Jadwal routes
     $routes->get('jadwal', 'Supervisor\JadwalController::index');
     $routes->post('jadwal/create-jadwal', 'Supervisor\JadwalController::createJadwal');
+    $routes->post('jadwal/(:num)/update-jadwal', 'Supervisor\JadwalController::updateJadwal/$1');
+    $routes->post('jadwal/(:num)/delete', 'Supervisor\JadwalController::deleteJadwal/$1');
+    $routes->get('jadwal/(:num)/delete', 'Supervisor\JadwalController::deleteJadwal/$1');
     $routes->post('jadwal/(:num)/respon-ajuan', 'Supervisor\JadwalController::responAjuan/$1');
     $routes->get('jadwal/(:num)', 'Supervisor\JadwalController::detail/$1');
 
