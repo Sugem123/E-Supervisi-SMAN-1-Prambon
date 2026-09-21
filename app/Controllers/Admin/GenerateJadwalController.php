@@ -217,17 +217,33 @@ class GenerateJadwalController extends BaseController
 
                     $guru = array_shift($queueGurus);
                     
-                    // Rotasi kelas aktif
-                    $selectedKelas = !empty($kelases) ? $kelases[$kelasIdx % $kelasCount] : null;
-                    $kelasIdx++;
+                    // Cek apakah Tendik / Tata Usaha (tidak dialokasikan ke kelas KBM siswa)
+                    $isTendik = (
+                        ($guru['jenis_ptk'] ?? '') === 'Tendik' ||
+                        stripos($guru['mata_pelajaran'] ?? '', 'tata usaha') !== false ||
+                        stripos($guru['mata_pelajaran'] ?? '', 'administrasi') !== false
+                    );
 
-                    // Tentukan slot jam ke- (rotasi jam aktif, melewati jam ke-5 istirahat)
+                    if ($isTendik) {
+                        $selectedKelas   = null;
+                        $kelasId         = null;
+                        $namaKelas       = '-';
+                        $materiSupervisi = 'Supervisi Administrasi & Layanan Kependidikan';
+                    } else {
+                        $selectedKelas   = !empty($kelases) ? $kelases[$kelasIdx % $kelasCount] : null;
+                        $kelasId         = $selectedKelas ? $selectedKelas['id'] : null;
+                        $namaKelas       = $selectedKelas ? $selectedKelas['nama_kelas'] : 'Semua Kelas';
+                        $materiSupervisi = 'Supervisi Akademik Proses Pembelajaran';
+                        $kelasIdx++;
+                    }
+
+                    // Tentukan slot jam ke-
                     $currentSlotIdx = ($startSlotIdx + $slot) % count($availableSlots);
                     $slotNumber = $availableSlots[$currentSlotIdx];
                     $timeInfo = $slotWaktu[$slotNumber] ?? [
                         'jam_ke' => (string)$slotNumber,
-                        'waktu_dari' => '07:30',
-                        'waktu_sampai' => '08:05'
+                        'waktu_dari' => '07:00',
+                        'waktu_sampai' => '07:45'
                     ];
 
                     $generatedJadwals[] = [
@@ -238,14 +254,14 @@ class GenerateJadwalController extends BaseController
                         'supervisor_id'     => $supervisor['id'],
                         'nama_supervisor'   => $supervisor['username'],
                         'mata_pelajaran'    => !empty($guru['mata_pelajaran']) ? $guru['mata_pelajaran'] : 'Mata Pelajaran Umum',
-                        'kelas_id'          => $selectedKelas ? $selectedKelas['id'] : null,
-                        'nama_kelas'        => $selectedKelas ? $selectedKelas['nama_kelas'] : 'Semua Kelas',
+                        'kelas_id'          => $kelasId,
+                        'nama_kelas'        => $namaKelas,
                         'tanggal_supervisi' => $currentDate,
                         'hari'              => $hariIndo,
                         'jam_ke'            => $timeInfo['jam_ke'],
                         'waktu_dari'        => $timeInfo['waktu_dari'],
                         'waktu_sampai'      => $timeInfo['waktu_sampai'],
-                        'materi_supervisi'  => 'Supervisi Akademik Proses Pembelajaran'
+                        'materi_supervisi'  => $materiSupervisi
                     ];
                 }
             }

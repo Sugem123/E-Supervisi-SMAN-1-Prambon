@@ -233,7 +233,13 @@
                                                 <strong><?= esc($j['hari']); ?></strong>
                                                 <div>Jam ke-<?= esc($j['jam_ke']); ?> (<?= esc(substr($j['waktu_dari'], 0, 5) . ' - ' . substr($j['waktu_sampai'], 0, 5)); ?>)</div>
                                             </td>
-                                            <td class="align-middle"><?= esc($j['kelas'] ?: '-'); ?></td>
+                                            <td class="align-middle">
+                                                <?php if (empty($j['kelas']) || $j['kelas'] === '-' || ($j['jenis_ptk'] ?? '') === 'Tendik'): ?>
+                                                    <span class="badge badge-light border text-muted px-2 py-1"><i class="fas fa-briefcase mr-1"></i>Non-KBM / TU</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-primary font-weight-bold px-2 py-1"><?= esc($j['kelas']); ?></span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="align-middle"><?= esc($j['mata_pelajaran'] ?: '-'); ?></td>
                                             <td class="text-center align-middle">
                                                 <?php if ($j['status'] === 'Selesai'): ?>

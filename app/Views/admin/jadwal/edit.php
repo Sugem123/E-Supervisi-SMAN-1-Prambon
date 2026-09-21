@@ -100,9 +100,9 @@
                             </div>
                             
                             <div class="form-group">
-                                <label for="kelas_id">Kelas</label>
-                                <select class="form-control" id="kelas_id" name="kelas_id" required>
-                                    <option value="">Pilih Kelas</option>
+                                <label for="kelas_id">Kelas <small class="text-muted">(Kosongkan jika Tenaga Teknis / Non-KBM)</small></label>
+                                <select class="form-control" id="kelas_id" name="kelas_id">
+                                    <option value="">-- Non-KBM / Tendik (Tanpa Kelas) --</option>
                                     <?php foreach ($kelases as $kelas): ?>
                                         <option value="<?= $kelas['id'] ?>" <?= $jadwal['kelas_id'] == $kelas['id'] ? 'selected' : '' ?>>
                                             <?= $kelas['nama_kelas'] ?>

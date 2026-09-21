@@ -157,7 +157,7 @@ class KelompokSupervisiController extends BaseController
         if (!empty($anggota)) {
             $guruIds = array_column($anggota, 'guru_id');
             $jBuilder = $this->db->table('jadwal_supervisi js')
-                ->select('js.*, guru.nama as nama_guru, guru.nip as nip_guru, users.username as supervisor_nama')
+                ->select('js.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.jenis_ptk, users.username as supervisor_nama')
                 ->join('guru', 'guru.id = js.guru_id', 'left')
                 ->join('users', 'users.id = js.supervisor_id', 'left')
                 ->whereIn('js.guru_id', $guruIds);
@@ -669,7 +669,27 @@ class KelompokSupervisiController extends BaseController
                     continue;
                 }
 
-                $selectedKelas = !empty($kelases) ? $kelases[$kelasIdx % $kelasCount] : null;
+                // Cek apakah anggota adalah Tendik / Tenaga Teknis / Tata Usaha (tidak memiliki kelas KBM)
+                $isTendik = (
+                    ($guru['jenis_ptk'] ?? '') === 'Tendik' ||
+                    stripos($guru['mata_pelajaran'] ?? '', 'tata usaha') !== false ||
+                    stripos($guru['mata_pelajaran'] ?? '', 'administrasi') !== false ||
+                    stripos($kelompok['nama_kelompok'] ?? '', 'teknis') !== false ||
+                    stripos($kelompok['nama_kelompok'] ?? '', 'tata usaha') !== false
+                );
+
+                if ($isTendik) {
+                    $selectedKelas   = null;
+                    $kelasName       = '-';
+                    $kelasId         = null;
+                    $materiSupervisi = 'Supervisi Administrasi & Layanan Kependidikan';
+                } else {
+                    $selectedKelas   = !empty($kelases) ? $kelases[$kelasIdx % $kelasCount] : null;
+                    $kelasName       = $selectedKelas ? $selectedKelas['nama_kelas'] : 'Semua Kelas';
+                    $kelasId         = $selectedKelas ? $selectedKelas['id'] : null;
+                    $materiSupervisi = 'Supervisi Akademik Proses Pembelajaran';
+                    $kelasIdx++;
+                }
 
                 $currentSlotIdx = ($startSlotIdx + $slot) % count($availableSlots);
                 $slotNumber = $availableSlots[$currentSlotIdx];
@@ -699,22 +719,20 @@ class KelompokSupervisiController extends BaseController
                     continue;
                 }
 
-                $kelasIdx++;
-
                 $dataInsert = [
                     'kelompok_id'       => $id,
                     'tahun_ajar_id'     => $tahunAjarId,
                     'guru_id'           => $guruId,
                     'supervisor_id'     => $kelompok['supervisor_id'],
                     'mata_pelajaran'    => !empty($guru['mata_pelajaran']) ? $guru['mata_pelajaran'] : 'Mata Pelajaran Umum',
-                    'kelas'             => $selectedKelas ? $selectedKelas['nama_kelas'] : 'Semua Kelas',
-                    'kelas_id'          => $selectedKelas ? $selectedKelas['id'] : null,
+                    'kelas'             => $kelasName,
+                    'kelas_id'          => $kelasId,
                     'jam_ke'            => $timeInfo['jam_ke'],
                     'hari'              => $hariIndo,
                     'tanggal_supervisi' => $currentDate,
                     'waktu_dari'        => $timeInfo['waktu_dari'],
                     'waktu_sampai'      => $timeInfo['waktu_sampai'],
-                    'materi_supervisi'  => 'Supervisi Akademik Proses Pembelajaran',
+                    'materi_supervisi'  => $materiSupervisi,
                     'status'            => 'Terjadwal',
                     'created_at'        => date('Y-m-d H:i:s')
                 ];
