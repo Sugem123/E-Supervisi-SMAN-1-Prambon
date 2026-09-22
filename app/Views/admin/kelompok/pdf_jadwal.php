@@ -256,22 +256,22 @@
         </tbody>
     </table>
 
-    <!-- Tanda Tangan Kompatibel Dompdf -->
+    <!-- Tanda Tangan Kompatibel Dompdf (Mengetahui Kepala Sekolah di Kiri, Supervisor di Kanan) -->
     <table class="signature-table">
         <tr>
-            <td>
-                Supervisor Pembina,<br>
-                <div class="signature-space"></div>
-                <span class="signature-name"><?= esc($kelompok['nama_supervisor'] ?? '....................................') ?></span><br>
-                NIP. <?= esc($kelompok['nip_supervisor'] ?: '....................................') ?>
-            </td>
-            <td>
-                <?= esc(!empty($kota) ? $kota : 'Nganjuk') ?>, <?= format_tanggal_indonesia(date('Y-m-d'), false) ?><br>
+            <td style="width: 50%; text-align: center; vertical-align: top; border: none;">
                 Mengetahui,<br>
                 Kepala <?= esc(get_nama_sekolah()) ?><br>
                 <div class="signature-space"></div>
                 <span class="signature-name"><?= esc(!empty($nama_kepala) ? $nama_kepala : '....................................') ?></span><br>
                 NIP. <?= esc(!empty($nip_kepala) ? $nip_kepala : '....................................') ?>
+            </td>
+            <td style="width: 50%; text-align: center; vertical-align: top; border: none;">
+                <?= esc(!empty($kota) ? $kota : 'Prambon') ?>, <?= format_tanggal_indonesia(date('Y-m-d'), false) ?><br>
+                Supervisor Pembina,<br>
+                <div class="signature-space"></div>
+                <span class="signature-name"><?= esc($kelompok['nama_supervisor'] ?? '....................................') ?></span><br>
+                NIP. <?= esc($kelompok['nip_supervisor'] ?: '....................................') ?>
             </td>
         </tr>
     </table>

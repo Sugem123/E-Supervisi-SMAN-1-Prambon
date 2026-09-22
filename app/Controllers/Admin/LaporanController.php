@@ -54,6 +54,12 @@ class LaporanController extends BaseController
         }
 
         // 2. Query Jadwal Supervisi pada tahun ajaran yang dipilih
+        $supervisor_id = $this->request->getGet('supervisor_id');
+        $supervisor_id = ($supervisor_id !== '' && $supervisor_id !== null) ? (int)$supervisor_id : null;
+        if (session()->get('role') === 'supervisor') {
+            $supervisor_id = (int)session()->get('id');
+        }
+
         $jadwalQuery = $jadwalModel
             ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, guru.jenis_ptk, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
             ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
@@ -65,8 +71,21 @@ class LaporanController extends BaseController
         if ($tahun_ajar_id) {
             $jadwalQuery->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
         }
+        if ($supervisor_id) {
+            $jadwalQuery->where('jadwal_supervisi.supervisor_id', $supervisor_id);
+        }
 
         $jadwals = $jadwalQuery->orderBy('jadwal_supervisi.tanggal_supervisi', 'ASC')->findAll();
+
+        // Ambil daftar supervisor aktif untuk dropdown filter
+        $userModel = new UserModel();
+        $supervisors = $userModel
+            ->select('users.id, users.username, users.role, COALESCE(guru.nama, users.username) as nama_lengkap, guru.nip')
+            ->join('guru', 'guru.user_id = users.id', 'left')
+            ->whereIn('users.role', ['supervisor', 'kepala'])
+            ->where('users.status', 'Aktif')
+            ->orderBy('nama_lengkap', 'ASC')
+            ->findAll();
 
         // 3. Daftar Jenis Penilaian untuk kolom skor dinamis (Aktif + yang dinilai pada jadwal)
         $activeJenis = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
@@ -205,6 +224,8 @@ class LaporanController extends BaseController
             'tahun_ajars' => $tahunAjars,
             'tahun_ajar_id' => $tahun_ajar_id,
             'selectedTahunAjar' => $selectedTahunAjar,
+            'supervisors' => $supervisors,
+            'selectedSupervisorId' => $supervisor_id,
             'jenisPenilaians' => $jenisPenilaians,
             'jadwals' => $jadwals,
             'metrics' => [
@@ -248,6 +269,11 @@ class LaporanController extends BaseController
             helper('date');
 
             $tahun_ajar_id = $this->request->getGet('tahun_ajar_id');
+            $supervisor_id = $this->request->getGet('supervisor_id');
+            $supervisor_id = ($supervisor_id !== '' && $supervisor_id !== null) ? (int)$supervisor_id : null;
+            if (session()->get('role') === 'supervisor') {
+                $supervisor_id = (int)session()->get('id');
+            }
 
             // Find selected tahun ajar
             $tahunAjars = $tahunAjarModel->orderBy('tahun_ajar', 'DESC')->findAll();
@@ -280,6 +306,9 @@ class LaporanController extends BaseController
 
             if ($tahun_ajar_id) {
                 $jadwalQuery->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
+            }
+            if ($supervisor_id) {
+                $jadwalQuery->where('jadwal_supervisi.supervisor_id', $supervisor_id);
             }
 
             $jadwals = $jadwalQuery->orderBy('guru.nama', 'ASC')->findAll();
@@ -368,15 +397,19 @@ class LaporanController extends BaseController
             $rataRata = $totalGuru > 0 ? round($totalNilaiSum / $totalGuru, 2) : 0;
 
             // Get Signatures Data
-            $namaKepala = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
-            $nipKepala = get_pengaturan('nip_kepala', '19740514 199903 2 010');
+            $namaKepala   = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+            $nipKepala    = get_pengaturan('nip_kepala', '19740514 199903 2 010');
             $kotaMadrasah = get_pengaturan('kecamatan', 'Prambon');
 
-            // Default supervisor or first supervisor found in system
-            $firstSpvId = !empty($jadwals) ? ($jadwals[0]['supervisor_id'] ?? null) : null;
-            $spvPerson = get_supervisor_person($firstSpvId);
-            $namaSupervisor = $spvPerson['nama'];
-            $nipSupervisor  = $spvPerson['nip'];
+            $isCetakGlobal  = empty($supervisor_id);
+            $namaSupervisor = 'Supervisor Pembina';
+            $nipSupervisor  = '-';
+
+            if (!$isCetakGlobal) {
+                $spvPerson = get_supervisor_person($supervisor_id);
+                $namaSupervisor = $spvPerson['nama'];
+                $nipSupervisor  = $spvPerson['nip'];
+            }
 
             $data = [
                 'selectedTahunAjar' => $selectedTahunAjar,
@@ -389,6 +422,8 @@ class LaporanController extends BaseController
                 'nipKepala'         => $nipKepala,
                 'namaSupervisor'    => $namaSupervisor,
                 'nipSupervisor'     => $nipSupervisor,
+                'isCetakGlobal'     => $isCetakGlobal,
+                'selectedSpvId'     => $supervisor_id,
                 'kotaMadrasah'      => $kotaMadrasah,
                 'tanggalCetak'      => date('Y-m-d')
             ];

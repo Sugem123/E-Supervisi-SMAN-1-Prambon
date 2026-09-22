@@ -10,8 +10,12 @@
             <p class="text-muted small mb-0">Dashboard rekapitulasi capaian akademik, evaluasi pembelajaran, dan cetak laporan resmi.</p>
         </div>
         <div class="mt-3 mt-sm-0">
-            <a href="<?= base_url('admin/laporan/cetak-rekap-detail?tahun_ajar_id=' . ($tahun_ajar_id ?? '')) ?>" target="_blank" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
-                <i class="fas fa-file-pdf fa-sm text-white-50 mr-1"></i> Cetak PDF Rekap Detail
+            <?php 
+                $isFilterSpv = !empty($selectedSupervisorId);
+                $pdfUrl = base_url('admin/laporan/cetak-rekap-detail?tahun_ajar_id=' . ($tahun_ajar_id ?? '') . ($isFilterSpv ? '&supervisor_id=' . $selectedSupervisorId : ''));
+            ?>
+            <a href="<?= $pdfUrl ?>" target="_blank" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2" title="<?= $isFilterSpv ? 'Cetak laporan bertanda tangan Supervisor Pembina & Kepala Sekolah' : 'Cetak laporan rekapitulasi total bertanda tangan Kepala Sekolah' ?>">
+                <i class="fas fa-file-pdf fa-sm text-white-50 mr-1"></i> Cetak PDF Rekap <?= $isFilterSpv ? 'per Supervisor' : 'Global' ?>
             </a>
             <a href="<?= base_url('admin/laporan/hasil-supervisi?tahun_ajar_id=' . ($tahun_ajar_id ?? '')) ?>" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
                 <i class="fas fa-clipboard-list fa-sm text-white-50 mr-1"></i> Kelola Hasil Supervisi
@@ -19,28 +23,50 @@
         </div>
     </div>
 
-    <!-- Filter Tahun Ajaran Card -->
+    <!-- Filter Tahun Ajaran & Supervisor Card -->
     <div class="card shadow-sm mb-4 border-left-primary">
         <div class="card-body py-3">
             <form method="get" action="<?= base_url('admin/laporan') ?>" class="form-inline d-flex flex-wrap align-items-center justify-content-between">
-                <div class="d-flex align-items-center mb-2 mb-md-0">
-                    <label class="mr-3 font-weight-bold text-gray-700 mb-0">
-                        <i class="fas fa-calendar-alt text-primary mr-1"></i> Periode Tahun Ajaran:
+                <div class="d-flex align-items-center flex-wrap mb-2 mb-md-0">
+                    <label class="mr-2 font-weight-bold text-gray-700 mb-0">
+                        <i class="fas fa-calendar-alt text-primary mr-1"></i> Tahun Ajaran:
                     </label>
-                    <select name="tahun_ajar_id" class="form-control form-control-sm mr-2" style="min-width: 220px;" onchange="this.form.submit()">
+                    <select name="tahun_ajar_id" class="form-control form-control-sm mr-3 mb-1 mb-md-0" style="min-width: 180px;" onchange="this.form.submit()">
                         <?php foreach ($tahun_ajars as $ta): ?>
                             <option value="<?= $ta['id'] ?>" <?= ($ta['id'] == $tahun_ajar_id) ? 'selected' : '' ?>>
                                 <?= esc($ta['tahun_ajar']) ?> - Semester <?= esc($ta['semester']) ?> <?= (!empty($ta['is_active'])) ? '(Aktif)' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fas fa-filter mr-1"></i> Terapkan
+
+                    <label class="mr-2 font-weight-bold text-gray-700 mb-0">
+                        <i class="fas fa-user-tie text-info mr-1"></i> Supervisor:
+                    </label>
+                    <select name="supervisor_id" class="form-control form-control-sm mr-2 mb-1 mb-md-0" style="min-width: 220px;" onchange="this.form.submit()">
+                        <option value="">-- Semua Supervisor (Cetak Global) --</option>
+                        <?php foreach (($supervisors ?? []) as $spv): ?>
+                            <option value="<?= $spv['id'] ?>" <?= ((string)($selectedSupervisorId ?? '') === (string)$spv['id']) ? 'selected' : '' ?>>
+                                <?= esc($spv['nama_lengkap'] ?? $spv['username']) ?><?= !empty($spv['nip']) ? ' (NIP: ' . esc($spv['nip']) . ')' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <button type="submit" class="btn btn-sm btn-primary mr-1">
+                        <i class="fas fa-filter mr-1"></i> Filter
                     </button>
+                    <?php if (!empty($selectedSupervisorId)): ?>
+                        <a href="<?= base_url('admin/laporan?tahun_ajar_id=' . ($tahun_ajar_id ?? '')) ?>" class="btn btn-sm btn-outline-secondary" title="Kembalikan ke Rekapitulasi Global Seluruh Supervisor">
+                            <i class="fas fa-undo mr-1"></i> Reset ke Global
+                        </a>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <span class="badge badge-light border px-3 py-2 text-dark font-weight-normal">
-                        Tahun Ajaran Terpilih: <strong><?= esc($selectedTahunAjar['tahun_ajar'] ?? '-') ?> (<?= esc($selectedTahunAjar['semester'] ?? '-') ?>)</strong>
+                        <?php if ($isFilterSpv): ?>
+                            <span class="text-primary font-weight-bold"><i class="fas fa-user-check mr-1"></i>Mode: Rekap per Supervisor</span>
+                        <?php else: ?>
+                            <span class="text-success font-weight-bold"><i class="fas fa-globe mr-1"></i>Mode: Rekap Total Global (Semua Supervisor)</span>
+                        <?php endif; ?>
                     </span>
                 </div>
             </form>
@@ -222,8 +248,8 @@
                 <i class="fas fa-table mr-1"></i> Rekapitulasi Rincian Supervisi Guru (Tahun Ajaran <?= esc($selectedTahunAjar['tahun_ajar'] ?? '-') ?>)
             </h6>
             <div>
-                <a href="<?= base_url('admin/laporan/cetak-rekap-detail?tahun_ajar_id=' . ($tahun_ajar_id ?? '')) ?>" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm">
-                    <i class="fas fa-print mr-1"></i> Cetak Dokumen Rekap Landscape
+                <a href="<?= $pdfUrl ?>" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm" title="<?= $isFilterSpv ? 'Cetak Rekap per Supervisor (Tanda tangan Kepala & Supervisor)' : 'Cetak Rekap Total Global (Tanda tangan Kepala Sekolah)' ?>">
+                    <i class="fas fa-print mr-1"></i> Cetak Rekap <?= $isFilterSpv ? 'per Supervisor' : 'Global' ?> (PDF)
                 </a>
             </div>
         </div>

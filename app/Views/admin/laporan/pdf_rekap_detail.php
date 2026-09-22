@@ -260,6 +260,11 @@
         <div class="sub-judul">
             Tahun Ajaran: <strong><?= esc($selectedTahunAjar['tahun_ajar'] ?? '-') ?></strong> &nbsp;|&nbsp;
             Semester: <strong><?= esc($selectedTahunAjar['semester'] ?? '-') ?></strong>
+            <?php if (!empty($isCetakGlobal)): ?>
+                &nbsp;|&nbsp; <em>(Rekapitulasi Total Seluruh Supervisor)</em>
+            <?php else: ?>
+                &nbsp;|&nbsp; Supervisor Pembina: <strong><?= esc($namaSupervisor) ?></strong>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -494,28 +499,45 @@
         </tfoot>
     </table>
 
-    <!-- Blok Tanda Tangan Resmi (2 Kolom: Supervisor Pembina & Kepala Sekolah) -->
-    <table class="signature-table">
-        <tr>
-            <!-- Kolom Kiri: Supervisor Pembina -->
-            <td>
-                Mengetahui,<br>
-                <strong>Supervisor Pembina</strong>
-                <div class="signature-space"></div>
-                <div class="signature-name"><?= esc($namaSupervisor) ?></div>
-                <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipSupervisor) ?></div>
-            </td>
+    <!-- Blok Tanda Tangan Resmi -->
+    <?php if (!empty($isCetakGlobal)): ?>
+        <!-- Cetak Global: Tanda Tangan HANYA Kepala Sekolah saja di Sebelah Kanan -->
+        <table class="signature-table">
+            <tr>
+                <td style="width: 58%; border: none;"></td>
+                <td style="width: 42%; border: none; text-align: center;">
+                    <?= esc(!empty($kotaMadrasah) ? $kotaMadrasah : 'Prambon') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia($tanggalCetak, false) : date('d F Y') ?><br>
+                    <strong>Kepala <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : 'Sekolah') ?></strong>
+                    <div class="signature-space"></div>
+                    <div class="signature-name"><?= esc($namaKepala) ?></div>
+                    <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipKepala) ?></div>
+                </td>
+            </tr>
+        </table>
+    <?php else: ?>
+        <!-- Cetak per Supervisor: Mengetahui Kepala Sekolah di Kiri, Supervisor Pembina di Kanan -->
+        <table class="signature-table">
+            <tr>
+                <!-- Kolom Kiri: Mengetahui Kepala Sekolah -->
+                <td style="width: 50%; border: none; text-align: center;">
+                    Mengetahui,<br>
+                    <strong>Kepala <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : 'Sekolah') ?></strong>
+                    <div class="signature-space"></div>
+                    <div class="signature-name"><?= esc($namaKepala) ?></div>
+                    <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipKepala) ?></div>
+                </td>
 
-            <!-- Kolom Kanan: Kepala Sekolah -->
-            <td>
-                <?= esc(!empty($kotaMadrasah) ? $kotaMadrasah : '....................') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia($tanggalCetak, false) : date('d F Y') ?><br>
-                <strong>Kepala Sekolah</strong>
-                <div class="signature-space"></div>
-                <div class="signature-name"><?= esc($namaKepala) ?></div>
-                <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipKepala) ?></div>
-            </td>
-        </tr>
-    </table>
+                <!-- Kolom Kanan: Supervisor Pembina -->
+                <td style="width: 50%; border: none; text-align: center;">
+                    <?= esc(!empty($kotaMadrasah) ? $kotaMadrasah : 'Prambon') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia($tanggalCetak, false) : date('d F Y') ?><br>
+                    <strong>Supervisor Pembina</strong>
+                    <div class="signature-space"></div>
+                    <div class="signature-name"><?= esc($namaSupervisor) ?></div>
+                    <div style="font-size: 7.5pt; color: #444;">NIP. <?= esc($nipSupervisor) ?></div>
+                </td>
+            </tr>
+        </table>
+    <?php endif; ?>
 
     <!-- Footer Catatan Otomatis -->
     <div class="footer-note">
