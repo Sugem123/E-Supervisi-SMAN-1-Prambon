@@ -124,6 +124,7 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
             margin-bottom: 15px;
             font-size: 8pt;
         }
@@ -133,6 +134,14 @@
             border: 1px solid #333;
             padding: 4px 5px;
             vertical-align: middle;
+            word-wrap: break-word;
+        }
+
+        .teacher-name {
+            font-size: 8.2pt;
+            font-weight: bold;
+            color: #111;
+            white-space: nowrap;
         }
 
         .data-table thead th {
@@ -321,24 +330,67 @@
     </table>
 
     <!-- Tabel Rincian Rekapitulasi Guru Lengkap -->
+    <?php
+    $numJenis = !empty($jenisPenilaians) ? count($jenisPenilaians) : 0;
+    if ($numJenis <= 1) {
+        $wNo    = "3.5%";
+        $wNama  = "32%";
+        $wMapel = "18%";
+        $wKelas = "8%";
+        $wTgl   = "10%";
+        $wJenis = "14.5%";
+        $wAkhir = "7%";
+        $wKual  = "7%";
+    } elseif ($numJenis == 2) {
+        $wNo    = "3.5%";
+        $wNama  = "27%";
+        $wMapel = "16%";
+        $wKelas = "6.5%";
+        $wTgl   = "9%";
+        $wJenis = "16%";
+        $wAkhir = "6%";
+        $wKual  = "6%";
+    } elseif ($numJenis == 3) {
+        $wNo    = "3%";
+        $wNama  = "25%";
+        $wMapel = "14%";
+        $wKelas = "6%";
+        $wTgl   = "8%";
+        $wJenis = "12.6%";
+        $wAkhir = "6%";
+        $wKual  = "6%";
+    } else {
+        $wNo    = "3%";
+        $wNama  = "24%";
+        $wMapel = "13%";
+        $wKelas = "5%";
+        $wTgl   = "7%";
+        $wAkhir = "6%";
+        $wKual  = "6%";
+        $rem    = 100 - (3 + 24 + 13 + 5 + 7 + 6 + 6);
+        $wJenis = round($rem / $numJenis, 1) . "%";
+    }
+    ?>
     <table class="data-table">
         <thead>
             <tr>
-                <th rowspan="2" style="width: 28px;">No</th>
-                <th rowspan="2" style="width: 130px;">Nama Guru & NIP</th>
-                <th rowspan="2" style="width: 90px;">Mata Pelajaran</th>
-                <th rowspan="2" style="width: 55px;">Kelas</th>
-                <th rowspan="2" style="width: 70px;">Tanggal</th>
+                <th rowspan="2" style="width: <?= $wNo ?>;">No</th>
+                <th rowspan="2" style="width: <?= $wNama ?>;">Nama Guru &amp; NIP</th>
+                <th rowspan="2" style="width: <?= $wMapel ?>;">Mata Pelajaran</th>
+                <th rowspan="2" style="width: <?= $wKelas ?>;">Kelas</th>
+                <th rowspan="2" style="width: <?= $wTgl ?>;">Tanggal</th>
                 <?php if (!empty($jenisPenilaians)): ?>
                     <th colspan="<?= count($jenisPenilaians) ?>">Skor per Jenis Penilaian (%)</th>
                 <?php endif; ?>
-                <th rowspan="2" style="width: 55px;">Nilai Akhir</th>
-                <th rowspan="2" style="width: 75px;">Kualifikasi</th>
+                <th rowspan="2" style="width: <?= $wAkhir ?>;">Nilai Akhir</th>
+                <th rowspan="2" style="width: <?= $wKual ?>;">Kualifikasi</th>
             </tr>
             <tr>
                 <?php if (!empty($jenisPenilaians)): ?>
                     <?php foreach ($jenisPenilaians as $jp): ?>
-                        <th style="font-size: 7pt; max-width: 90px;"><?= esc($jp['nama']) ?></th>
+                        <th style="width: <?= $wJenis ?>; font-size: 6.8pt; line-height: 1.15; padding: 3px 2px; text-transform: uppercase;">
+                            <?= esc($jp['nama']) ?>
+                        </th>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tr>
@@ -360,12 +412,12 @@
                 <tr>
                     <td class="text-center"><?= $no++ ?></td>
                     <td>
-                        <strong><?= esc($row['nama_guru']) ?></strong>
+                        <span class="teacher-name"><?= esc($row['nama_guru']) ?></span>
                         <?php if (!empty($row['nip_guru'])): ?>
-                            <br><small style="color: #555; font-size: 7pt;">NIP. <?= esc($row['nip_guru']) ?></small>
+                            <br><small style="color: #555; font-size: 6.8pt; line-height: 1.2;">NIP. <?= esc($row['nip_guru']) ?></small>
                         <?php endif; ?>
                         <?php if (!empty($row['nama_supervisor'])): ?>
-                            <br><small style="color: #1e40af; font-size: 6.8pt;">Spv: <?= esc($row['nama_supervisor']) ?></small>
+                            <br><small style="color: #1e40af; font-size: 6.8pt; line-height: 1.2;">Spv: <?= esc($row['nama_supervisor']) ?></small>
                         <?php endif; ?>
                     </td>
                     <td><?= esc($row['mata_pelajaran'] ?? '-') ?></td>

@@ -53,15 +53,9 @@ class LaporanController extends BaseController
             }
         }
 
-        // 2. Daftar Jenis Penilaian untuk kolom skor dinamis (Hanya yang Aktif)
-        $jenisPenilaians = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
-        if (empty($jenisPenilaians)) {
-            $jenisPenilaians = $jenisPenilaianModel->orderBy('id', 'ASC')->findAll();
-        }
-
-        // 3. Query Jadwal Supervisi pada tahun ajaran yang dipilih
+        // 2. Query Jadwal Supervisi pada tahun ajaran yang dipilih
         $jadwalQuery = $jadwalModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, guru.jenis_ptk, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
             ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
             ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
@@ -73,6 +67,29 @@ class LaporanController extends BaseController
         }
 
         $jadwals = $jadwalQuery->orderBy('jadwal_supervisi.tanggal_supervisi', 'ASC')->findAll();
+
+        // 3. Daftar Jenis Penilaian untuk kolom skor dinamis (Aktif + yang dinilai pada jadwal)
+        $activeJenis = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
+        $activeIds = array_column($activeJenis, 'id');
+
+        $evaluatedIds = [];
+        if (!empty($jadwals)) {
+            $jadwalIds = array_column($jadwals, 'id');
+            $evaluatedRows = $db->table('hasil_supervisi')
+                ->select('jenis_penilaian_id')
+                ->whereIn('jadwal_supervisi_id', $jadwalIds)
+                ->distinct()
+                ->get()
+                ->getResultArray();
+            $evaluatedIds = array_map('intval', array_column($evaluatedRows, 'jenis_penilaian_id'));
+        }
+
+        $allRelevantIds = array_values(array_unique(array_merge($activeIds, $evaluatedIds)));
+        if (!empty($allRelevantIds)) {
+            $jenisPenilaians = $jenisPenilaianModel->whereIn('id', $allRelevantIds)->orderBy('id', 'ASC')->findAll();
+        } else {
+            $jenisPenilaians = $activeJenis;
+        }
 
         // 4. Hitung Skor per Guru dan per Jenis Penilaian
         $totalJadwal = count($jadwals);
@@ -251,15 +268,9 @@ class LaporanController extends BaseController
                 }
             }
 
-            // Get active jenis penilaian only
-            $jenisPenilaians = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
-            if (empty($jenisPenilaians)) {
-                $jenisPenilaians = $jenisPenilaianModel->orderBy('id', 'ASC')->findAll();
-            }
-
             // Query completed schedules
             $jadwalQuery = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, guru.jenis_ptk, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
                 ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
                 ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
                 ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
@@ -272,6 +283,29 @@ class LaporanController extends BaseController
             }
 
             $jadwals = $jadwalQuery->orderBy('guru.nama', 'ASC')->findAll();
+
+            // Ambil semua jenis penilaian yang Aktif, SERTA jenis penilaian yang sudah dinilai pada jadwal yang ditampilkan
+            $activeJenis = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
+            $activeIds = array_column($activeJenis, 'id');
+
+            $evaluatedIds = [];
+            if (!empty($jadwals)) {
+                $jadwalIds = array_column($jadwals, 'id');
+                $evaluatedRows = $db->table('hasil_supervisi')
+                    ->select('jenis_penilaian_id')
+                    ->whereIn('jadwal_supervisi_id', $jadwalIds)
+                    ->distinct()
+                    ->get()
+                    ->getResultArray();
+                $evaluatedIds = array_map('intval', array_column($evaluatedRows, 'jenis_penilaian_id'));
+            }
+
+            $allRelevantIds = array_values(array_unique(array_merge($activeIds, $evaluatedIds)));
+            if (!empty($allRelevantIds)) {
+                $jenisPenilaians = $jenisPenilaianModel->whereIn('id', $allRelevantIds)->orderBy('id', 'ASC')->findAll();
+            } else {
+                $jenisPenilaians = $activeJenis;
+            }
 
             // Calculate detailed score per teacher & per jenis penilaian
             $rekapData = [];
