@@ -393,7 +393,7 @@
                 if (!empty($hasilList)) {
                     foreach ($hasilList as $hasil) {
                         $jenis_id = $hasil['jenis_penilaian_id'];
-                        $nama = isset($nama_komponen[$jenis_id]) ? $nama_komponen[$jenis_id] : ('Komponen ' . $jenis_id);
+                        $nama = !empty($hasil['nama_jenis']) ? $hasil['nama_jenis'] : (isset($nama_komponen[$jenis_id]) ? $nama_komponen[$jenis_id] : ('Komponen ' . $jenis_id));
                         $skor_komponen = 0;
                         $jumlah_aspek = 0;
 
@@ -530,7 +530,7 @@
                     $jenisId = $hasil['jenis_penilaian_id'];
 
                     // === PERBAIKAN: Gunakan $jenisId sebagai kunci, bukan $counter ===
-                    $jenisNama = $hasil['nama_jenis'] ?? ($komponen_nama_list[$jenisId] ?? 'Komponen Penilaian');
+                    $jenisNama = !empty($hasil['nama_jenis']) ? $hasil['nama_jenis'] : ($komponen_nama_list[$jenisId] ?? 'Komponen Penilaian');
 
                     // (LOGIKA PHP TIDAK DIUBAH)
                     $total_skor = 0;
@@ -630,13 +630,13 @@
             <tr>
                 <!-- Kolom Kiri: Guru yang Disupervisi -->
                 <td style="width: 33.3%;" class="signature-block">
-                    <p>Guru yang Disupervisi,</p>
+                    <p>Pegawai / Guru yang Disupervisi,</p>
                     <div class="signature-space"></div>
                     <p style="margin: 2px 0; font-weight: bold; text-decoration: underline;">
                         <?= esc($schedule['nama_guru'] ?? '') ?>
                     </p>
                     <p style="margin: 2px 0;">
-                        NIP: <?= esc($schedule['nip_guru'] ?? '') ?>
+                        NIP: <?= esc(!empty($schedule['nip_guru']) ? $schedule['nip_guru'] : (!empty($schedule['nip']) ? $schedule['nip'] : '-')) ?>
                     </p>
                 </td>
 
@@ -647,14 +647,14 @@
 
                 <!-- Kolom Kanan: Supervisor -->
                 <td style="width: 33.3%;" class="signature-block">
-                    <p>Gisting, <?= format_tanggal_indonesia(date('Y-m')) ?><br>
-                        Supervisor,</p>
+                    <p><?= esc(function_exists('get_pengaturan') ? get_pengaturan('kecamatan', 'Prambon') : 'Prambon') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia(!empty($schedule['tanggal_supervisi']) ? $schedule['tanggal_supervisi'] : date('Y-m-d'), false) : date('d F Y') ?><br>
+                        Supervisor Pembina,</p>
                     <div class="signature-space"></div>
                     <p style="margin: 2px 0; font-weight: bold; text-decoration: underline;">
                         <?= esc($schedule['nama_supervisor'] ?? '...........................') ?>
                     </p>
                     <p style="margin: 2px 0;">
-                        NIP: <?= esc($schedule['nip_supervisor'] ?? '...........................') ?>
+                        NIP: <?= esc(!empty($schedule['nip_supervisor']) ? $schedule['nip_supervisor'] : '-') ?>
                     </p>
                 </td>
             </tr>
@@ -665,14 +665,14 @@
                 <td></td>
 
                 <!-- Kolom Tengah: Kepala Sekolah -->
-                <td style="padding-top: 40px;" class="signature-block">
-                    <p>Mengetahui,<br>Kepala Sekolah</p>
+                <td style="padding-top: 30px;" class="signature-block">
+                    <p>Mengetahui,<br>Kepala <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : 'Sekolah') ?></p>
                     <div class="signature-space"></div>
                     <p style="margin: 2px 0; font-weight: bold; text-decoration: underline;">
-                        <?= esc($schedule['nama_kepala'] ?? '...........................') ?>
+                        <?= esc(!empty($schedule['nama_kepala']) ? $schedule['nama_kepala'] : (function_exists('get_nama_kepala') ? get_nama_kepala() : '...........................')) ?>
                     </p>
                     <p style="margin: 2px 0;">
-                        NIP: <?= esc($schedule['nip_kepala'] ?? '...........................') ?>
+                        NIP: <?= esc(!empty($schedule['nip_kepala']) ? $schedule['nip_kepala'] : (function_exists('get_nip_kepala') ? get_nip_kepala() : '...........................')) ?>
                     </p>
                 </td>
 

@@ -53,16 +53,20 @@ class LaporanController extends BaseController
             }
         }
 
-        // 2. Daftar Jenis Penilaian untuk kolom skor dinamis
-        $jenisPenilaians = $jenisPenilaianModel->findAll();
+        // 2. Daftar Jenis Penilaian untuk kolom skor dinamis (Hanya yang Aktif)
+        $jenisPenilaians = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
+        if (empty($jenisPenilaians)) {
+            $jenisPenilaians = $jenisPenilaianModel->orderBy('id', 'ASC')->findAll();
+        }
 
         // 3. Query Jadwal Supervisi pada tahun ajaran yang dipilih
         $jadwalQuery = $jadwalModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, supervisor.username as nama_supervisor')
-            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
-            ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left');
+            ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left');
 
         if ($tahun_ajar_id) {
             $jadwalQuery->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
@@ -247,16 +251,20 @@ class LaporanController extends BaseController
                 }
             }
 
-            // Get all jenis penilaian
-            $jenisPenilaians = $jenisPenilaianModel->findAll();
+            // Get active jenis penilaian only
+            $jenisPenilaians = $jenisPenilaianModel->where('status', 'Aktif')->orderBy('id', 'ASC')->findAll();
+            if (empty($jenisPenilaians)) {
+                $jenisPenilaians = $jenisPenilaianModel->orderBy('id', 'ASC')->findAll();
+            }
 
             // Query completed schedules
             $jadwalQuery = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, supervisor.username as nama_supervisor, supervisor.nip as nip_supervisor')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
                 ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
                 ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left')
                 ->where('jadwal_supervisi.status', 'Selesai');
 
             if ($tahun_ajar_id) {
@@ -325,15 +333,16 @@ class LaporanController extends BaseController
             $totalGuru = count($rekapData);
             $rataRata = $totalGuru > 0 ? round($totalNilaiSum / $totalGuru, 2) : 0;
 
-            // Get Signatures Data (SMA placeholders blank until set via Pengaturan).
-            $namaKepala = get_pengaturan('nama_kepala', '');
-            $nipKepala = get_pengaturan('nip_kepala', '');
-            $kotaMadrasah = get_pengaturan('kecamatan', '');
+            // Get Signatures Data
+            $namaKepala = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+            $nipKepala = get_pengaturan('nip_kepala', '19740514 199903 2 010');
+            $kotaMadrasah = get_pengaturan('kecamatan', 'Prambon');
 
             // Default supervisor or first supervisor found in system
-            $firstSupervisor = $userModel->where('role', 'supervisor')->first();
-            $namaSupervisor = $firstSupervisor['username'] ?? 'Supervisor Pembina';
-            $nipSupervisor = $firstSupervisor['nip'] ?? '-';
+            $firstSpvId = !empty($jadwals) ? ($jadwals[0]['supervisor_id'] ?? null) : null;
+            $spvPerson = get_supervisor_person($firstSpvId);
+            $namaSupervisor = $spvPerson['nama'];
+            $nipSupervisor  = $spvPerson['nip'];
 
             $data = [
                 'selectedTahunAjar' => $selectedTahunAjar,
@@ -413,9 +422,11 @@ class LaporanController extends BaseController
         
         // Build query for supervision schedules
         $jadwalQuery = $jadwalModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru')
-            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id');
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+            ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left');
             
         // Apply filters
         if ($tahun_ajar_id) {
@@ -511,19 +522,25 @@ class LaporanController extends BaseController
         
         // Get schedule with related data
         $schedule = $jadwalModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran')
-            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, guru.pangkat_golongan, guru.status_kepegawaian, guru.jenis_ptk, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+            ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
+            ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left')
             ->where('jadwal_supervisi.id', $id)
-            ->where('jadwal_supervisi.status', 'Selesai')
             ->first();
             
         if (!$schedule) {
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Data hasil supervisi tidak ditemukan');
         }
         
-        // Get hasil records for this schedule
-        $hasilList = $hasilModel->where('jadwal_supervisi_id', $id)->findAll();
+        // Get hasil records for this schedule with joined jenis_penilaian
+        $hasilList = $hasilModel
+            ->select('hasil_supervisi.*, jenis_penilaian.nama as nama_jenis, jenis_penilaian.skor_maksimal as jenis_skor_maks')
+            ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id', 'left')
+            ->where('hasil_supervisi.jadwal_supervisi_id', $id)
+            ->findAll();
         
         // Get detail results grouped by jenis_penilaian_id
         $detailResults = [];
@@ -564,19 +581,25 @@ class LaporanController extends BaseController
         
         // Get schedule with related data
         $schedule = $jadwalModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran')
-            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, guru.pangkat_golongan, guru.status_kepegawaian, guru.jenis_ptk, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+            ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
+            ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left')
             ->where('jadwal_supervisi.id', $id)
-            ->where('jadwal_supervisi.status', 'Selesai')
             ->first();
             
         if (!$schedule) {
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Data hasil supervisi tidak ditemukan');
         }
         
-        // Get hasil records for this schedule
-        $hasilList = $hasilModel->where('jadwal_supervisi_id', $id)->findAll();
+        // Get hasil records for this schedule with joined jenis_penilaian
+        $hasilList = $hasilModel
+            ->select('hasil_supervisi.*, jenis_penilaian.nama as nama_jenis, jenis_penilaian.skor_maksimal as jenis_skor_maks')
+            ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id', 'left')
+            ->where('hasil_supervisi.jadwal_supervisi_id', $id)
+            ->findAll();
         
         // Get detail results grouped by jenis_penilaian_id
         $detailResults = [];
@@ -598,35 +621,17 @@ class LaporanController extends BaseController
             ->get()
             ->getResultArray();
             
-        // Get kepala sekolah data
-        $kepalaSekolah = $userModel
-            ->select('username, nip')
-            ->where('role', 'kepala')
-            ->first();
-            
-        // Set nama dan nip kepala sekolah: prefer Pengaturan Identitas, fallback akun role kepala.
-        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', '');
-        $schedule['nip_kepala'] = get_pengaturan('nip_kepala', '');
-
-        if ($schedule['nama_kepala'] === '' && $kepalaSekolah) {
-            $schedule['nama_kepala'] = $kepalaSekolah['username'] ?? '';
-            $schedule['nip_kepala'] = $kepalaSekolah['nip'] ?? '';
-        }
+        // Set nama dan nip kepala sekolah dari pengaturan sistem
+        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+        $schedule['nip_kepala']  = get_pengaturan('nip_kepala', '19740514 199903 2 010');
         
-        // Get supervisor data if not already in schedule
-        if (empty($schedule['nama_supervisor']) && !empty($schedule['supervisor_id'])) {
-            $supervisor = $userModel
-                ->select('username, nip')
-                ->where('id', $schedule['supervisor_id'])
-                ->first();
-                
-            if ($supervisor) {
-                $schedule['nama_supervisor'] = $supervisor['username'] ?? 'Supervisor';
-                $schedule['nip_supervisor'] = $supervisor['nip'] ?? '';
+        // Ensure supervisor data is properly set with real name
+        if (empty($schedule['nama_supervisor']) || $schedule['nama_supervisor'] === ($schedule['nip_supervisor'] ?? '')) {
+            $spvPerson = get_supervisor_person($schedule['supervisor_id'] ?? null);
+            $schedule['nama_supervisor'] = $spvPerson['nama'];
+            if (empty($schedule['nip_supervisor'])) {
+                $schedule['nip_supervisor'] = $spvPerson['nip'];
             }
-        } else if (empty($schedule['nama_supervisor'])) {
-            $schedule['nama_supervisor'] = 'Supervisor';
-            $schedule['nip_supervisor'] = '';
         }
         
         // Ensure nip fields exist
@@ -670,6 +675,7 @@ class LaporanController extends BaseController
             $jadwalModel = new JadwalSupervisiModel();
             $tahunAjarModel = new TahunAjarModel();
             $guruModel = new GuruModel();
+            $hasilModel = new HasilSupervisiModel();
             $db = \Config\Database::connect();
             
             // Get filter parameters
@@ -678,10 +684,12 @@ class LaporanController extends BaseController
             
             // Build query for completed schedules
             $jadwalQuery = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.mata_pelajaran, kelas.nama_kelas')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
-                ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left');
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+                ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
+                ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left');
                 
             if ($tahun_ajar_id) {
                 $jadwalQuery->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
@@ -699,27 +707,39 @@ class LaporanController extends BaseController
             $completedJadwals = [];
             foreach ($jadwals as $jadwal) {
                 if ($jadwal['status'] == 'Selesai') {
-                    // Get average nilai_akhir for this schedule
-                    $hasilQuery = $db->table('hasil_supervisi')
-                        ->select('AVG(nilai_akhir) as avg_nilai')
-                        ->where('jadwal_supervisi_id', $jadwal['id']);
-                        
-                    $result = $hasilQuery->get()->getRow();
-                    
-                    if ($result) {
-                        $jadwal['hasil']['nilai_akhir'] = $result->avg_nilai;
-                        
-                        // Determine ketercapaian based on nilai
-                        if ($result->avg_nilai >= 3.5) {
-                            $jadwal['hasil']['ketercapaian'] = 'Sangat Baik';
-                        } elseif ($result->avg_nilai >= 2.5) {
-                            $jadwal['hasil']['ketercapaian'] = 'Baik';
-                        } elseif ($result->avg_nilai >= 1.5) {
-                            $jadwal['hasil']['ketercapaian'] = 'Cukup';
-                        } else {
-                            $jadwal['hasil']['ketercapaian'] = 'Kurang';
-                        }
+                    $hasilRecords = $hasilModel->where('jadwal_supervisi_id', $jadwal['id'])->findAll();
+                    $totalSkor = 0;
+                    $totalMaksimal = 0;
+                    foreach ($hasilRecords as $hasil) {
+                        $detailHasil = $db->table('detail_hasil_penilaian')
+                            ->where('hasil_supervisi_id', $hasil['id'])
+                            ->selectSum('skor')
+                            ->get()
+                            ->getRow();
+                        $detailCount = $db->table('detail_hasil_penilaian')
+                            ->where('hasil_supervisi_id', $hasil['id'])
+                            ->countAllResults();
+                        $totalSkor += (float)($detailHasil->skor ?? 0);
+                        $totalMaksimal += $detailCount * 4;
                     }
+
+                    $nilaiAkhir = ($totalMaksimal > 0) ? round(($totalSkor / $totalMaksimal) * 100, 2) : 0;
+                    if ($nilaiAkhir >= 86) {
+                        $ketercapaian = 'Baik Sekali';
+                    } elseif ($nilaiAkhir >= 70) {
+                        $ketercapaian = 'Baik';
+                    } elseif ($nilaiAkhir >= 55) {
+                        $ketercapaian = 'Cukup';
+                    } else {
+                        $ketercapaian = 'Kurang';
+                    }
+
+                    $jadwal['hasil'] = [
+                        'nilai_akhir'    => $nilaiAkhir,
+                        'ketercapaian'   => $ketercapaian,
+                        'total_skor'     => $totalSkor,
+                        'total_maksimal' => $totalMaksimal
+                    ];
                 }
                 $completedJadwals[] = $jadwal;
             }
@@ -854,10 +874,12 @@ class LaporanController extends BaseController
             
             // Build query for completed schedules
             $jadwalQuery = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.mata_pelajaran, kelas.nama_kelas')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
-                ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left');
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+                ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
+                ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left');
                 
             if ($tahun_ajar_id) {
                 $jadwalQuery->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
@@ -932,14 +954,19 @@ class LaporanController extends BaseController
                 $completedJadwals[] = $jadwal;
             }
             
+            $firstSpvId = !empty($completedJadwals) ? ($completedJadwals[0]['supervisor_id'] ?? null) : null;
+            $spvPerson = get_supervisor_person($firstSpvId);
+
             $data = [
-                'jadwals' => $completedJadwals,
-                'tahun_ajar_id' => $tahun_ajar_id,
-                'status' => $status,
-                'tahun_ajars' => $tahunAjarModel->findAll(),
+                'jadwals'         => $completedJadwals,
+                'tahun_ajar_id'   => $tahun_ajar_id,
+                'status'          => $status,
+                'tahun_ajars'     => $tahunAjarModel->findAll(),
                 // NOTE: keep legacy 'nama_madrasah' view key; add canonical 'nama_sekolah'.
-                'nama_madrasah' => get_nama_sekolah(),
-                'nama_sekolah' => get_nama_sekolah()
+                'nama_madrasah'   => get_nama_sekolah(),
+                'nama_sekolah'    => get_nama_sekolah(),
+                'nama_supervisor' => $spvPerson['nama'],
+                'nip_supervisor'  => $spvPerson['nip'],
             ];
             
             // Get tahun ajar filter info
@@ -998,10 +1025,12 @@ class LaporanController extends BaseController
             
             // Get selected schedules
             $jadwalQuery = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.mata_pelajaran, kelas.nama_kelas')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, kelas.nama_kelas, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
                 ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
+                ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left')
                 ->whereIn('jadwal_supervisi.id', $selectedIds);
                 
             if ($tahun_ajar_id) {
@@ -1195,17 +1224,23 @@ class LaporanController extends BaseController
             
             // Get schedule with related data
             $schedule = $jadwalModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran, COALESCE(guru_spv.nama, supervisor.username) as nama_supervisor, COALESCE(guru_spv.nip, supervisor.nip) as nip_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+                ->join('users as supervisor', 'supervisor.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = supervisor.id', 'left')
                 ->find($id);
                 
             if (!$schedule) {
                 throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
             }
             
-            // Get hasil records for this schedule
-            $hasilList = $hasilModel->where('jadwal_supervisi_id', $id)->findAll();
+            // Get hasil records for this schedule with joined jenis_penilaian
+            $hasilList = $hasilModel
+                ->select('hasil_supervisi.*, jenis_penilaian.nama as nama_jenis')
+                ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id', 'left')
+                ->where('jadwal_supervisi_id', $id)
+                ->findAll();
             
             // Get detail results grouped by jenis_penilaian_id
             $detailResults = [];
@@ -1269,25 +1304,30 @@ class LaporanController extends BaseController
             $sheet->setCellValue('A7', 'Kelas');
             $sheet->setCellValue('B7', ': ' . ($schedule['kelas'] ?? ''));
             
+            $sheet->setCellValue('A8', 'Supervisor Pembina');
+            $sheet->setCellValue('B8', ': ' . ($schedule['nama_supervisor'] ?? 'Supervisor Pembina') . (!empty($schedule['nip_supervisor']) ? ' (NIP: ' . $schedule['nip_supervisor'] . ')' : ''));
+
             // Style for header
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
             // Style for labels
-            $sheet->getStyle('A3:A7')->getFont()->setBold(true);
+            $sheet->getStyle('A3:A8')->getFont()->setBold(true);
             
             // Assessment Results section
-            $currentRow = 9;
+            $currentRow = 10;
             if (!empty($hasilList)) {
                 foreach ($hasilList as $hasil) {
                     $jenisId = $hasil['jenis_penilaian_id'];
-                    $jenisNama = '';
-                    switch($jenisId) {
-                        case 1: $jenisNama = 'Administrasi Guru'; break;
-                        case 2: $jenisNama = 'Proses Pembelajaran'; break;
-                        case 3: $jenisNama = 'Evaluasi Pembelajaran'; break;
-                        case 4: $jenisNama = 'Pengembangan Diri'; break;
-                        default: $jenisNama = 'Komponen Lain';
+                    $jenisNama = !empty($hasil['nama_jenis']) ? $hasil['nama_jenis'] : '';
+                    if (empty($jenisNama)) {
+                        switch($jenisId) {
+                            case 1: $jenisNama = 'Administrasi Guru'; break;
+                            case 2: $jenisNama = 'Proses Pembelajaran'; break;
+                            case 3: $jenisNama = 'Evaluasi Pembelajaran'; break;
+                            case 4: $jenisNama = 'Pengembangan Diri'; break;
+                            default: $jenisNama = 'Komponen ' . $jenisId;
+                        }
                     }
                     
                     // Section header

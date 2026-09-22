@@ -41,10 +41,11 @@ class PenilaianController extends BaseController
     {
         // Admin dapat melihat dan mengedit jadwal dengan status apapun
         $schedule = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran as guru_mata_pelajaran, users.username as nama_supervisor, users.nip as nip_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran as guru_mata_pelajaran, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor, tahun_ajar.tahun_ajar, tahun_ajar.semester')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
             ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.id', $jadwalId)
             ->first();
 

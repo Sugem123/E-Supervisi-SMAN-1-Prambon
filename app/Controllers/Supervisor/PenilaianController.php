@@ -213,9 +213,39 @@ class PenilaianController extends BaseController
                 
                 // Simpan semua detail penilaian sekaligus
                 $this->detailModel->insertBatch($detailsToInsert);
+
+                // Update skor & nilai_akhir di tabel hasil_supervisi
+                $totalSkorKomponen = 0;
+                $jumlahAspek = count($detailsToInsert);
+                foreach ($detailsToInsert as $d) {
+                    $totalSkorKomponen += (int)$d['skor'];
+                }
+                $skorMaksimal = $jumlahAspek * 4;
+                $persen = ($skorMaksimal > 0) ? round(($totalSkorKomponen / $skorMaksimal) * 100, 2) : 0;
+
+                if ($persen >= 86) {
+                    $ketercapaian = 'Baik Sekali';
+                } elseif ($persen >= 70) {
+                    $ketercapaian = 'Baik';
+                } elseif ($persen >= 55) {
+                    $ketercapaian = 'Cukup';
+                } else {
+                    $ketercapaian = 'Kurang';
+                }
+
+                $this->hasilModel->update($hasilId, [
+                    'total_skor'   => $totalSkorKomponen,
+                    'nilai_akhir'  => $persen,
+                    'ketercapaian' => $ketercapaian
+                ]);
             } else {
                 // Jika tidak ada detail yang disimpan, hapus detail lama saja
                 $this->detailModel->where('hasil_supervisi_id', $hasilId)->delete();
+                $this->hasilModel->update($hasilId, [
+                    'total_skor'   => 0,
+                    'nilai_akhir'  => 0,
+                    'ketercapaian' => 'Kurang'
+                ]);
             }
 
             return $this->response->setJSON([
@@ -302,9 +332,10 @@ class PenilaianController extends BaseController
                 $totalSkor += $detail['skor'];
             }
             
-            // Calculate percentage (using fixed value of 48 for consistency)
-            $maxScore = 48; // Gunakan nilai tetap 48 untuk konsistensi
-            $nilaiAkhir = $maxScore > 0 ? ($totalSkor / $maxScore) * 100 : 0;
+            // Calculate percentage based on actual number of aspects * 4
+            $detailCount = count($details);
+            $maxScore = $detailCount * 4;
+            $nilaiAkhir = $maxScore > 0 ? round(($totalSkor / $maxScore) * 100, 2) : 0;
             
             // Determine ketercapaian based on nilai_akhir
             if ($nilaiAkhir >= 86) {

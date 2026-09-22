@@ -364,9 +364,18 @@
                         <?php if (!empty($row['nip_guru'])): ?>
                             <br><small style="color: #555; font-size: 7pt;">NIP. <?= esc($row['nip_guru']) ?></small>
                         <?php endif; ?>
+                        <?php if (!empty($row['nama_supervisor'])): ?>
+                            <br><small style="color: #1e40af; font-size: 6.8pt;">Spv: <?= esc($row['nama_supervisor']) ?></small>
+                        <?php endif; ?>
                     </td>
                     <td><?= esc($row['mata_pelajaran'] ?? '-') ?></td>
-                    <td class="text-center"><?= esc($row['nama_kelas'] ?? '-') ?></td>
+                    <td class="text-center">
+                        <?php if (empty($row['kelas']) || $row['kelas'] === '-' || ($row['jenis_ptk'] ?? '') === 'Tendik'): ?>
+                            <span style="font-size: 7pt; color: #64748b;">Non-KBM</span>
+                        <?php else: ?>
+                            <?= esc($row['nama_kelas'] ?? $row['kelas'] ?? '-') ?>
+                        <?php endif; ?>
+                    </td>
                     <td class="text-center">
                         <?= !empty($row['tanggal_supervisi']) ? date('d/m/Y', strtotime($row['tanggal_supervisi'])) : '-' ?>
                     </td>

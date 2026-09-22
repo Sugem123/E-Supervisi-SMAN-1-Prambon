@@ -29,11 +29,12 @@ class JadwalController extends BaseController
     {
         $tahunAjarAktif = $this->tahunAjarModel->where('status_aktif', 'Aktif')->first();
         $query = $this->jadwalSupervisiModel
-            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, kelas.nama_kelas, users.username as nama_supervisor')
-            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, kelas.nama_kelas, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
-            ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left');
+            ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left');
 
         // Lembaran baru per tahun: index hanya tampilkan tahun aktif.
         // Arsip tetap tersimpan; aktifkan tahun lama untuk melihatnya.
@@ -464,11 +465,12 @@ class JadwalController extends BaseController
             $status = $this->request->getGet('status');
 
             $query = $this->jadwalSupervisiModel
-                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, kelas.nama_kelas, users.username as nama_supervisor, users.nip as nip_supervisor')
-                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id')
-                ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+                ->select('jadwal_supervisi.*, tahun_ajar.tahun_ajar, tahun_ajar.semester, guru.nama as nama_guru, guru.nip as nip_guru, kelas.nama_kelas, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+                ->join('tahun_ajar', 'tahun_ajar.id = jadwal_supervisi.tahun_ajar_id', 'left')
+                ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
                 ->join('kelas', 'kelas.id = jadwal_supervisi.kelas_id', 'left')
-                ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left');
+                ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+                ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left');
 
             if (!empty($tahun_ajar_id)) {
                 $query->where('jadwal_supervisi.tahun_ajar_id', $tahun_ajar_id);
@@ -481,10 +483,9 @@ class JadwalController extends BaseController
                 
             $data = [
                 'jadwals'       => $jadwals,
-                // NOTE: blank SMA placeholders until set via Pengaturan Identitas Sekolah.
-                'nama_kepala'   => get_pengaturan('nama_kepala', ''),
-                'nip_kepala'    => get_pengaturan('nip_kepala', ''),
-                'kota_madrasah' => get_pengaturan('kecamatan', ''),
+                'nama_kepala'   => get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.'),
+                'nip_kepala'    => get_pengaturan('nip_kepala', '19740514 199903 2 010'),
+                'kota_madrasah' => get_pengaturan('kecamatan', 'Prambon'),
                 'tanggal_cetak' => date('Y-m-d')
             ];
             

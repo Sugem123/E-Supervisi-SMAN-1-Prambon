@@ -112,22 +112,15 @@
                 <?php foreach ($hasilList as $hasil): ?>
                     <?php
                     $jenisId = $hasil['jenis_penilaian_id'];
-                    $jenisNama = '';
-                    switch ($jenisId) {
-                        case 1:
-                            $jenisNama = 'Administrasi Guru';
-                            break;
-                        case 2:
-                            $jenisNama = 'Proses Pembelajaran';
-                            break;
-                        case 3:
-                            $jenisNama = 'Evaluasi Pembelajaran';
-                            break;
-                        case 4:
-                            $jenisNama = 'Pengembangan Diri';
-                            break;
-                        default:
-                            $jenisNama = 'Komponen Lain';
+                    $jenisNama = !empty($hasil['nama_jenis']) ? $hasil['nama_jenis'] : '';
+                    if (empty($jenisNama)) {
+                        switch ($jenisId) {
+                            case 1: $jenisNama = 'Administrasi Guru'; break;
+                            case 2: $jenisNama = 'Proses Pembelajaran'; break;
+                            case 3: $jenisNama = 'Evaluasi Pembelajaran'; break;
+                            case 4: $jenisNama = 'Pengembangan Diri'; break;
+                            default: $jenisNama = 'Komponen ' . $jenisId;
+                        }
                     }
                     ?>
                     <div class="mb-4">
@@ -273,7 +266,7 @@
             if (!empty($hasilList)) {
                 foreach ($hasilList as $hasil) {
                     $jenis_id = $hasil['jenis_penilaian_id'];
-                    $nama = isset($nama_komponen[$jenis_id]) ? $nama_komponen[$jenis_id] : 'Komponen ' . $jenis_id;
+                    $nama = !empty($hasil['nama_jenis']) ? $hasil['nama_jenis'] : (isset($nama_komponen[$jenis_id]) ? $nama_komponen[$jenis_id] : ('Komponen ' . $jenis_id));
 
                     // Hitung total skor dan jumlah aspek untuk komponen ini
                     $skor_komponen = 0;

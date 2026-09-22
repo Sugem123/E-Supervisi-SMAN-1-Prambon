@@ -48,9 +48,10 @@ class PdfController extends BaseController
 
         // Get schedule details
         $schedule = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, guru.status_kepegawaian, users.username as nama_supervisor, users.nip as nip_supervisor')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, guru.status_kepegawaian, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.id', $jadwalId)
             ->where('jadwal_supervisi.guru_id', $guru['id']) // Use guru ID, not user ID
             ->where('jadwal_supervisi.status', 'Selesai')
@@ -63,7 +64,7 @@ class PdfController extends BaseController
         // Get all assessment results for this schedule
         $hasilList = $this->hasilModel
             ->select('hasil_supervisi.*, jenis_penilaian.nama as nama_jenis')
-            ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id')
+            ->join('jenis_penilaian', 'jenis_penilaian.id = hasil_supervisi.jenis_penilaian_id', 'left')
             ->where('jadwal_supervisi_id', $jadwalId)
             ->findAll();
             
@@ -89,16 +90,17 @@ class PdfController extends BaseController
             ->orderBy('created_at', 'DESC')
             ->findAll();
 
-        // Get kepala sekolah data
-        $kepalaSekolah = $this->userModel
-            ->select('username, nip')
-            ->where('role', 'kepala')
-            ->where('status', 'Aktif')
-            ->first();
-            
-        if ($kepalaSekolah) {
-            $schedule['nama_kepala'] = $kepalaSekolah['username'];
-            $schedule['nip_kepala'] = isset($kepalaSekolah['nip']) ? $kepalaSekolah['nip'] : '';
+        // Set nama dan nip kepala sekolah dari pengaturan sistem
+        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+        $schedule['nip_kepala']  = get_pengaturan('nip_kepala', '19740514 199903 2 010');
+
+        // Pastikan nama supervisor terisi dengan nama asli
+        if (empty($schedule['nama_supervisor']) || $schedule['nama_supervisor'] === ($schedule['nip_supervisor'] ?? '')) {
+            $spvPerson = get_supervisor_person($schedule['supervisor_id'] ?? null);
+            $schedule['nama_supervisor'] = $spvPerson['nama'];
+            if (empty($schedule['nip_supervisor'])) {
+                $schedule['nip_supervisor'] = $spvPerson['nip'];
+            }
         }
 
         $data = [

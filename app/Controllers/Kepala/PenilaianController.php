@@ -35,14 +35,17 @@ class PenilaianController extends BaseController
     {
         // Get schedule details - allow both 'Terjadwal' and 'Selesai' statuses for viewing
         $schedule = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.mata_pelajaran as guru_mata_pelajaran')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.mata_pelajaran as guru_mata_pelajaran, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
+            ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.id', $jadwalId)
             ->whereIn('jadwal_supervisi.status', ['Terjadwal', 'Selesai']) // Allow both statuses
             ->first();
 
-        // Menambahkan nama kepala sekolah sebagai pengganti nama supervisor
-        $schedule['nama_supervisor'] = get_pengaturan('nama_kepala', 'Kepala Sekolah');
+        if (empty($schedule['nama_supervisor'])) {
+            $schedule['nama_supervisor'] = get_pengaturan('nama_kepala', 'Kepala Sekolah');
+        }
 
         if (!$schedule) {
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Jadwal tidak ditemukan atau tidak dapat dinilai');
@@ -204,9 +207,39 @@ class PenilaianController extends BaseController
                 
                 // Simpan semua detail penilaian sekaligus
                 $this->detailModel->insertBatch($detailsToInsert);
+
+                // Update skor & nilai_akhir di tabel hasil_supervisi
+                $totalSkorKomponen = 0;
+                $jumlahAspek = count($detailsToInsert);
+                foreach ($detailsToInsert as $d) {
+                    $totalSkorKomponen += (int)$d['skor'];
+                }
+                $skorMaksimal = $jumlahAspek * 4;
+                $persen = ($skorMaksimal > 0) ? round(($totalSkorKomponen / $skorMaksimal) * 100, 2) : 0;
+
+                if ($persen >= 86) {
+                    $ketercapaian = 'Baik Sekali';
+                } elseif ($persen >= 70) {
+                    $ketercapaian = 'Baik';
+                } elseif ($persen >= 55) {
+                    $ketercapaian = 'Cukup';
+                } else {
+                    $ketercapaian = 'Kurang';
+                }
+
+                $this->hasilModel->update($hasilId, [
+                    'total_skor'   => $totalSkorKomponen,
+                    'nilai_akhir'  => $persen,
+                    'ketercapaian' => $ketercapaian
+                ]);
             } else {
                 // Jika tidak ada detail yang disimpan, hapus detail lama saja
                 $this->detailModel->where('hasil_supervisi_id', $hasilId)->delete();
+                $this->hasilModel->update($hasilId, [
+                    'total_skor'   => 0,
+                    'nilai_akhir'  => 0,
+                    'ketercapaian' => 'Kurang'
+                ]);
             }
 
             log_message('info', 'Successfully saved penilaian');
@@ -294,9 +327,10 @@ class PenilaianController extends BaseController
                 $totalSkor += $detail['skor'];
             }
             
-            // Calculate percentage (using fixed value of 48 for consistency)
-            $maxScore = 48; // Gunakan nilai tetap 48 untuk konsistensi
-            $nilaiAkhir = $maxScore > 0 ? ($totalSkor / $maxScore) * 100 : 0;
+            // Calculate percentage based on actual number of aspects * 4
+            $detailCount = count($details);
+            $maxScore = $detailCount * 4;
+            $nilaiAkhir = $maxScore > 0 ? round(($totalSkor / $maxScore) * 100, 2) : 0;
             
             // Determine ketercapaian based on nilai_akhir
             if ($nilaiAkhir >= 86) {
@@ -467,9 +501,10 @@ class PenilaianController extends BaseController
                 $totalSkor += $detail['skor'];
             }
             
-            // Calculate percentage (using fixed value of 48 for consistency)
-            $maxScore = 48; // Gunakan nilai tetap 48 untuk konsistensi
-            $nilaiAkhir = $maxScore > 0 ? ($totalSkor / $maxScore) * 100 : 0;
+            // Calculate percentage based on actual number of aspects * 4
+            $detailCount = count($details);
+            $maxScore = $detailCount * 4;
+            $nilaiAkhir = $maxScore > 0 ? round(($totalSkor / $maxScore) * 100, 2) : 0;
             
             // Determine ketercapaian based on nilai_akhir
             if ($nilaiAkhir >= 86) {

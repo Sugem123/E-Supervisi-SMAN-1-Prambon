@@ -244,9 +244,29 @@
             <?php endif; ?>
         </tbody>
     </table>
+
+    <!-- Blok Tanda Tangan Resmi -->
+    <table style="width: 100%; border: none !important; margin-top: 25px; page-break-inside: avoid;">
+        <tr style="border: none !important;">
+            <td style="width: 50%; border: none !important; text-align: center; vertical-align: top; padding: 0;">
+                Mengetahui,<br>
+                <strong>Supervisor Pembina</strong>
+                <div style="height: 50px;"></div>
+                <div style="font-weight: bold; text-decoration: underline;"><?= esc($nama_supervisor ?? 'Supervisor Pembina') ?></div>
+                <div style="font-size: 8pt; color: #555;">NIP. <?= esc($nip_supervisor ?? '-') ?></div>
+            </td>
+            <td style="width: 50%; border: none !important; text-align: center; vertical-align: top; padding: 0;">
+                <?= esc(function_exists('get_pengaturan') ? get_pengaturan('kecamatan', 'Prambon') : 'Prambon') ?>, <?= function_exists('format_tanggal_indonesia') ? format_tanggal_indonesia(date('Y-m-d'), false) : date('d F Y') ?><br>
+                <strong>Kepala <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : 'Sekolah') ?></strong>
+                <div style="height: 50px;"></div>
+                <div style="font-weight: bold; text-decoration: underline;"><?= esc(function_exists('get_nama_kepala') ? get_nama_kepala() : 'IIN YURISTIN NADHIROH S.Pd., M.MPd.') ?></div>
+                <div style="font-size: 8pt; color: #555;">NIP. <?= esc(function_exists('get_nip_kepala') ? get_nip_kepala() : '19740514 199903 2 010') ?></div>
+            </td>
+        </tr>
+    </table>
     
     <div class="footer">
-        <p>Dicetak pada: <?= date('d F Y H:i:s') ?></p>
+        <p>Dicetak pada: <?= date('d F Y H:i:s') ?> WIB &bull; <?= esc(function_exists('get_nama_sekolah') ? get_nama_sekolah() : '') ?></p>
     </div>
 </body>
 </html>

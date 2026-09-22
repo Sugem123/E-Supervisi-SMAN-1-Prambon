@@ -40,11 +40,11 @@ class HasilController extends BaseController
     public function index()
     {
         // Get completed supervision schedules (without supervisor filter for kepala)
-        // Menggunakan join dengan users.id = jadwal_supervisi.supervisor_id karena data tidak konsisten
         $jadwalSelesai = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, users.username as nama_supervisor')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.status', 'Selesai')
             ->orderBy('jadwal_supervisi.tanggal_supervisi', 'DESC')
             ->findAll();
@@ -59,11 +59,11 @@ class HasilController extends BaseController
     public function detail($id)
     {
         // Get schedule details
-        // Menggunakan join dengan users.id = jadwal_supervisi.supervisor_id karena data tidak konsisten
         $schedule = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, users.username as nama_supervisor')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.id', $id)
             ->where('jadwal_supervisi.status', 'Selesai')
             ->first();
@@ -333,16 +333,17 @@ class HasilController extends BaseController
     {
         // Get schedule details
         $schedule = $this->jadwalModel
-            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, users.username as nama_supervisor, users.nip as nip_supervisor')
-            ->join('guru', 'guru.id = jadwal_supervisi.guru_id')
+            ->select('jadwal_supervisi.*, guru.nama as nama_guru, guru.nip as nip_guru, guru.pangkat_golongan, guru.mata_pelajaran as guru_mata_pelajaran, COALESCE(guru_spv.nama, users.username) as nama_supervisor, COALESCE(guru_spv.nip, users.nip) as nip_supervisor')
+            ->join('guru', 'guru.id = jadwal_supervisi.guru_id', 'left')
             ->join('users', 'users.id = jadwal_supervisi.supervisor_id', 'left')
+            ->join('guru as guru_spv', 'guru_spv.user_id = users.id', 'left')
             ->where('jadwal_supervisi.id', $id)
             ->where('jadwal_supervisi.status', 'Selesai')
             ->first();
 
-        // Menambahkan nama kepala sekolah
-        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', 'Kepala Sekolah');
-        $schedule['nip_kepala'] = get_pengaturan('nip_kepala', '-');
+        // Menambahkan nama kepala sekolah dari pengaturan sistem
+        $schedule['nama_kepala'] = get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+        $schedule['nip_kepala'] = get_pengaturan('nip_kepala', '19740514 199903 2 010');
 
         if (!$schedule) {
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Hasil supervisi tidak ditemukan');

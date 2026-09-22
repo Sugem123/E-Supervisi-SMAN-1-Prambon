@@ -129,7 +129,52 @@ if (!function_exists('get_nama_kepala')) {
      */
     function get_nama_kepala(): string
     {
-        return get_pengaturan('nama_kepala', 'Kepala Sekolah');
+        return get_pengaturan('nama_kepala', 'IIN YURISTIN NADHIROH S.Pd., M.MPd.');
+    }
+}
+
+if (!function_exists('get_nip_kepala')) {
+    /**
+     * Get headmaster NIP from system settings
+     *
+     * @return string
+     */
+    function get_nip_kepala(): string
+    {
+        return get_pengaturan('nip_kepala', '19740514 199903 2 010');
+    }
+}
+
+if (!function_exists('get_supervisor_person')) {
+    /**
+     * Ambil data lengkap nama dan NIP supervisor pembina (berdasarkan user ID).
+     *
+     * @param mixed $userId
+     * @return array{nama: string, nip: string}
+     */
+    function get_supervisor_person($userId): array
+    {
+        if (empty($userId)) {
+            return ['nama' => 'Supervisor Pembina', 'nip' => '-'];
+        }
+        try {
+            $db = \Config\Database::connect();
+            $row = $db->table('users')
+                ->select('users.id, users.username, users.nip as user_nip, guru.nama as nama_guru, guru.nip as guru_nip')
+                ->join('guru', 'guru.user_id = users.id', 'left')
+                ->where('users.id', (int)$userId)
+                ->get()
+                ->getRowArray();
+
+            if ($row) {
+                return [
+                    'nama' => !empty($row['nama_guru']) ? $row['nama_guru'] : (!empty($row['username']) ? $row['username'] : 'Supervisor Pembina'),
+                    'nip'  => !empty($row['guru_nip']) ? $row['guru_nip'] : (!empty($row['user_nip']) ? $row['user_nip'] : '-')
+                ];
+            }
+        } catch (\Throwable $e) {
+        }
+        return ['nama' => 'Supervisor Pembina', 'nip' => '-'];
     }
 }
 

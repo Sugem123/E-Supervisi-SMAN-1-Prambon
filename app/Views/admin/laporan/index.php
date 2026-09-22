@@ -259,11 +259,20 @@
                                 <td class="align-middle">
                                     <strong class="text-dark"><?= esc($jadwal['nama_guru']) ?></strong>
                                     <?php if (!empty($jadwal['nip_guru'])): ?>
-                                        <br><span class="text-muted small">NIP. <?= esc($jadwal['nip_guru']) ?></span>
+                                        <div class="text-muted small">NIP. <?= esc($jadwal['nip_guru']) ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($jadwal['nama_supervisor'])): ?>
+                                        <div class="small text-muted mt-1"><i class="fas fa-user-tie text-info mr-1"></i>Spv: <?= esc($jadwal['nama_supervisor']) ?></div>
                                     <?php endif; ?>
                                 </td>
                                 <td class="align-middle"><?= esc($jadwal['mata_pelajaran'] ?? '-') ?></td>
-                                <td class="align-middle text-center"><?= esc($jadwal['nama_kelas'] ?? $jadwal['kelas'] ?? '-') ?></td>
+                                <td class="align-middle text-center">
+                                    <?php if (empty($jadwal['kelas']) || $jadwal['kelas'] === '-' || ($jadwal['jenis_ptk'] ?? '') === 'Tendik'): ?>
+                                        <span class="badge badge-light border text-muted px-2 py-1">Non-KBM</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-primary font-weight-bold px-2 py-1"><?= esc($jadwal['nama_kelas'] ?? $jadwal['kelas']) ?></span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="align-middle text-center">
                                     <?= !empty($jadwal['tanggal_supervisi']) ? date('d/m/Y', strtotime($jadwal['tanggal_supervisi'])) : '-' ?>
                                 </td>
